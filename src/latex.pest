@@ -1,0 +1,75 @@
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+
+NUMBER = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+
+
+ADD = { "+" }
+SUB = { "-" }
+MUL = { "*" }
+DIV = { "/" }
+PER = { "%" | "\\%" }
+
+EQUAL = { "=" }
+NOT_EQUAL = { "\\neq" | "\\ne" }
+LT = { "<" | "\\lt" }
+GT = { ">" | "\\gt" }
+LTE = { "\\le" | "\\leq" }
+GTE = { "\\ge" | "\\geq" }
+PI = { "\\pi" }
+
+L_BRACE = { "{" }
+R_BRACE = { "}" }
+L_PAREN = { "(" }
+R_PAREN = { ")" }
+L_BRACKET = { "[" }
+R_BRACKET = { "]" }
+L_BRACE_LITERAL = { "\\{" }
+R_BRACE_LITERAL = { "\\}" }
+L_PAREN_LITERAL = { "\\(" }
+R_PAREN_LITERAL = { "\\)" }
+L_BRACKET_LITERAL = { "\\[" }
+R_BRACKET_LITERAL = { "\\]" }
+PM = { "\\pm" | "±" }
+MP = { "\\mp" | "∓" }
+
+APPROX = { "\\approx" | "≈" }
+NOT_APPROX = !{ ("\\not ~ \\approx") | "≉" }
+
+CMD_MATHRM = { "\\mathrm" }
+CMD_MATHIT = { "\\mathit" }
+CMD_TEXT = { "\\text" }
+CMD_TEXTCIRCLED = { "\\textcircled" }
+
+CMD_DIV = { "\\div" }
+CMD_FRAC = { "\\frac" | "\\dfrac" | "\\tfrac" | "\\nicefrac" }
+CMD_INFTY = { "\\infty" }
+CMD_TIMES = { "\\times" }
+CMD_OTIMES = { "\\otimes" }
+CMD_CDOT = { "\\cdot" }
+CMD_CDOTS = { "\\cdots" }
+FUNC_SQRT = { "\\sqrt" }
+
+BEGIN_CASE = { "\\begin{cases}" }
+END_CASE = { "\\end{cases}" }
+
+DIV_SYMBOL = { DIV | CMD_DIV }
+MUL_SYMBOL = { MUL | CMD_TIMES | CMD_CDOT }
+
+CMD_TRI_FUNC = { "\\sin" | "\\cos" | "\\tan" | "\\csc" | "\\sec" | "\\cot" }
+
+CMD_DEGREE = { "\\degree" | "°" }
+CMD_TEMPERA = { "°" | "°C" | "°F" }
+
+BINARY_OP = _{ ADD | SUB | MUL_SYMBOL | DIV_SYMBOL | PER | EQUAL | NOT_EQUAL | LT | GT | LTE | GTE | APPROX | NOT_APPROX }
+
+
+expr = {
+    atom ~ (BINARY_OP ~ atom)*
+}
+atom = {
+    NUMBER | PI 
+}
+
+
+latex_string = { SOI ~ expr ~ EOI }
+

@@ -1,28 +1,28 @@
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
 
-NUMBER = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+NUMBER = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 
 
 ADD = { "+" }
 SUB = { "-" }
 MUL = { "*" }
 DIV = { "/" }
-PER = { "%" | "\\%" }
+PER = { "%" }
 
 EQUAL = { "=" }
 NOT_EQUAL = { "\\neq" | "\\ne" }
 LT = { "<" | "\\lt" }
 GT = { ">" | "\\gt" }
-LTE = { "\\le" | "\\leq" }
-GTE = { "\\ge" | "\\geq" }
+LTE = { "\\leq" | "\\le" }
+GTE = { "\\geq" | "\\ge" }
 PI = { "\\pi" }
 
-L_BRACE = { "{" }
-R_BRACE = { "}" }
-L_PAREN = { "(" }
-R_PAREN = { ")" }
-L_BRACKET = { "[" }
-R_BRACKET = { "]" }
+L_BRACE = _{ "{" }
+R_BRACE = _{ "}" }
+L_PAREN = _{ "(" }
+R_PAREN = _{ ")" }
+L_BRACKET = _{ "[" }
+R_BRACKET = _{ "]" }
 L_BRACE_LITERAL = { "\\{" }
 R_BRACE_LITERAL = { "\\}" }
 L_PAREN_LITERAL = { "\\(" }
@@ -33,7 +33,7 @@ PM = { "\\pm" | "±" }
 MP = { "\\mp" | "∓" }
 
 APPROX = { "\\approx" | "≈" }
-NOT_APPROX = !{ ("\\not ~ \\approx") | "≉" }
+NOT_APPROX = { "\\not" ~ "\\approx" | "≉" }
 
 CMD_MATHRM = { "\\mathrm" }
 CMD_MATHIT = { "\\mathit" }
@@ -41,7 +41,7 @@ CMD_TEXT = { "\\text" }
 CMD_TEXTCIRCLED = { "\\textcircled" }
 
 CMD_DIV = { "\\div" }
-CMD_FRAC = { "\\frac" | "\\dfrac" | "\\tfrac" | "\\nicefrac" }
+CMD_FRAC = _{ "\\frac" | "\\dfrac" | "\\tfrac" | "\\nicefrac" }
 CMD_INFTY = { "\\infty" }
 CMD_TIMES = { "\\times" }
 CMD_OTIMES = { "\\otimes" }
@@ -63,13 +63,21 @@ CMD_TEMPERA = { "°" | "°C" | "°F" }
 BINARY_OP = _{ ADD | SUB | MUL_SYMBOL | DIV_SYMBOL | PER | EQUAL | NOT_EQUAL | LT | GT | LTE | GTE | APPROX | NOT_APPROX }
 
 
-expr = {
-    atom ~ (BINARY_OP ~ atom)*
-}
+expr = { atom ~ (BINARY_OP ~ atom)* }
+
+signed_expr = { (ADD | SUB)* ~ expr }
+
 atom = {
-    NUMBER | PI 
+    fraction
+    | percentage
+    | L_PAREN ~ signed_expr ~ R_PAREN
+    | NUMBER
+    | PI
 }
 
+fraction = { CMD_FRAC ~ L_BRACE ~ signed_expr ~ R_BRACE ~ L_BRACE ~ signed_expr ~ R_BRACE }
 
-latex_string = { SOI ~ expr ~ EOI }
+percentage = { NUMBER ~ PER }
+
+latex_string = { SOI ~ signed_expr ~ EOI }
 

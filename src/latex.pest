@@ -1,83 +1,66 @@
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
 
-NUMBER = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+pi     =  { "\\pi" }
 
+op_add = { "+" }
+op_sub = { "-" }
+op_mul = { "*" | "\\times" | "\\cdot" }
+op_div = { "/" | "\\div" }
 
-ADD = { "+" }
-SUB = { "-" }
-MUL = { "*" }
-DIV = { "/" }
-PER = { "%" }
+op_eq      = { "=" }
+op_neq     = { "\\neq" | "\\ne" }
+op_lt      = { "<" | "\\lt" }
+op_gt      = { ">" | "\\gt" }
+op_lte     = { "\\leq" | "\\le" }
+op_gte     = { "\\geq" | "\\ge" }
+op_approx  = { "\\approx" | "≈" }
+op_napprox = { "\\not" ~ "\\approx" | "≉" }
 
-EQUAL = { "=" }
-NOT_EQUAL = { "\\neq" | "\\ne" }
-LT = { "<" | "\\lt" }
-GT = { ">" | "\\gt" }
-LTE = { "\\leq" | "\\le" }
-GTE = { "\\geq" | "\\ge" }
-PI = { "\\pi" }
-
-L_BRACE = _{ "{" }
-R_BRACE = _{ "}" }
-L_PAREN = _{ "(" }
-R_PAREN = _{ ")" }
-L_BRACKET = _{ "[" }
-R_BRACKET = _{ "]" }
-L_BRACE_LITERAL = { "\\{" }
-R_BRACE_LITERAL = { "\\}" }
-L_PAREN_LITERAL = { "\\(" }
-R_PAREN_LITERAL = { "\\)" }
-L_BRACKET_LITERAL = { "\\[" }
-R_BRACKET_LITERAL = { "\\]" }
-PM = { "\\pm" | "±" }
-MP = { "\\mp" | "∓" }
-
-APPROX = { "\\approx" | "≈" }
-NOT_APPROX = { "\\not" ~ "\\approx" | "≉" }
-
-CMD_MATHRM = { "\\mathrm" }
-CMD_MATHIT = { "\\mathit" }
-CMD_TEXT = { "\\text" }
-CMD_TEXTCIRCLED = { "\\textcircled" }
-
-CMD_DIV = { "\\div" }
-CMD_FRAC = _{ "\\frac" | "\\dfrac" | "\\tfrac" | "\\nicefrac" }
-CMD_INFTY = { "\\infty" }
-CMD_TIMES = { "\\times" }
-CMD_OTIMES = { "\\otimes" }
-CMD_CDOT = { "\\cdot" }
-CMD_CDOTS = { "\\cdots" }
-FUNC_SQRT = { "\\sqrt" }
-
-BEGIN_CASE = { "\\begin{cases}" }
-END_CASE = { "\\end{cases}" }
-
-DIV_SYMBOL = { DIV | CMD_DIV }
-MUL_SYMBOL = { MUL | CMD_TIMES | CMD_CDOT }
-
-CMD_TRI_FUNC = { "\\sin" | "\\cos" | "\\tan" | "\\csc" | "\\sec" | "\\cot" }
-
-CMD_DEGREE = { "\\degree" | "°" }
-CMD_TEMPERA = { "°" | "°C" | "°F" }
-
-BINARY_OP = _{ ADD | SUB | MUL_SYMBOL | DIV_SYMBOL | PER | EQUAL | NOT_EQUAL | LT | GT | LTE | GTE | APPROX | NOT_APPROX }
-
-
-expr = { atom ~ (BINARY_OP ~ atom)* }
-
-signed_expr = { (ADD | SUB)* ~ expr }
-
-atom = {
-    fraction
-    | percentage
-    | L_PAREN ~ signed_expr ~ R_PAREN
-    | NUMBER
-    | PI
+binary_op = _{
+    op_add | op_sub | op_mul | op_div
+    | op_eq | op_neq
+    | op_lt | op_gt | op_lte | op_gte
+    | op_approx | op_napprox
 }
 
-fraction = { CMD_FRAC ~ L_BRACE ~ signed_expr ~ R_BRACE ~ L_BRACE ~ signed_expr ~ R_BRACE }
+lparen = _{ "(" }
+rparen = _{ ")" }
+lbrace = _{ "{" }
+rbrace = _{ "}" }
 
-percentage = { NUMBER ~ PER }
+cmd_frac   = _{ "\\frac" | "\\dfrac" | "\\tfrac" | "\\nicefrac" }
+cmd_sqrt   = _{ "\\sqrt" }
+cmd_pm     = _{ "\\pm" | "±" }
+cmd_mp     = _{ "\\mp" | "∓" }
+cmd_degree = _{ "\\degree" | "°" }
 
-latex_string = { SOI ~ signed_expr ~ EOI }
+input = { SOI ~ expr ~ EOI }
+
+expr = { sign* ~ term ~ (binary_op ~ sign* ~ term)* }
+
+sign = { op_add | op_sub }
+
+term = { primary ~ suffix? }
+
+primary = {
+    group
+    | frac
+    | sqrt
+    | pm
+    | number
+    | pi
+}
+
+suffix = _{ degree_mark | percent_mark }
+degree_mark  = { cmd_degree }
+percent_mark = { "%" }
+
+group = { lparen ~ expr ~ rparen }
+
+frac = { cmd_frac ~ lbrace ~ expr ~ rbrace ~ lbrace ~ expr ~ rbrace }
+
+sqrt = { cmd_sqrt ~ lbrace ~ expr ~ rbrace }
+
+pm = { (cmd_pm | cmd_mp) ~ term }
 

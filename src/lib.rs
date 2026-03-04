@@ -10,77 +10,83 @@ pub fn add(left: u64, right: u64) -> u64 {
 
 fn transform(pair: Pair<'_, Rule>) -> String {
     match pair.as_rule() {
-        Rule::latex_string => pair.into_inner()
+        Rule::input => pair.into_inner()
             .filter(|p| p.as_rule() != Rule::EOI)
             .map(|p| transform(p))
             .collect::<Vec<String>>()
-            .join(" "),
-        Rule::expr => pair.into_inner()
-            .map(|p| transform(p))
-            .collect::<Vec<String>>()
-            .join(" "),
-        Rule::signed_expr => {
-            let mut pair_iter = pair.into_inner();
-            if pair_iter.len() == 1 {
-                return transform(pair_iter.next().unwrap());
-            }
-            let mut signs = Vec::new();
-            let mut last = None;
-            for p in pair_iter {
-                if p.as_rule() == Rule::ADD || p.as_rule() == Rule::SUB {
-                    signs.push(p);
-                } else {
-                    last = Some(p);
+            .join(""),
+
+        Rule::expr => {
+            let mut result = String::new();
+            for child in pair.into_inner() {
+                match child.as_rule() {
+                    Rule::sign => {
+                        let inner = child.into_inner().next().unwrap();
+                        result.push_str(match inner.as_rule() {
+                            Rule::op_add => "正",
+                            Rule::op_sub => "负",
+                            _ => unreachable!(),
+                        });
+                    }
+                    _ => result.push_str(&transform(child)),
                 }
             }
-            let sign_str: String = signs.iter().map(|s| match s.as_rule() {
-                Rule::ADD => "正",
-                Rule::SUB => "负",
-                _ => unreachable!(),
-            }).collect();
-            format!("{}{}", sign_str, transform(last.unwrap()))
-        },
-        Rule::atom => pair.into_inner()
+            result
+        }
+
+        Rule::term => {
+            let mut inner = pair.into_inner();
+            let base = transform(inner.next().unwrap());
+            match inner.next() {
+                Some(s) => match s.as_rule() {
+                    Rule::degree_mark => format!("{}度", base),
+                    Rule::percent_mark => format!("百分之{}", base),
+                    _ => unreachable!(),
+                },
+                None => base,
+            }
+        }
+
+        Rule::primary | Rule::group => pair.into_inner()
             .map(|p| transform(p))
             .collect::<Vec<String>>()
-            .join(" "),
-        Rule::fraction => {
-            let mut pair_iter = pair.into_inner();
+            .join(""),
 
-            let v1 = pair_iter.next().unwrap();
-            let v2 = pair_iter.next().unwrap();
+        Rule::frac => {
+            let mut inner = pair.into_inner();
+            let numerator = transform(inner.next().unwrap());
+            let denominator = transform(inner.next().unwrap());
+            format!("{}分之{}", denominator, numerator)
+        }
 
-            format!("{}分之{}", transform(v2), transform(v1))
-        },
-        Rule::percentage => format!("百分之{}", transform(pair.into_inner().next().unwrap())),
+        Rule::sqrt => format!("根号{}", transform(pair.into_inner().next().unwrap())),
+        Rule::pm => format!("正负{}", transform(pair.into_inner().next().unwrap())),
 
-        // Numbers and constants
-        Rule::NUMBER => pair.as_str().to_string(),
-        Rule::PI => "PI".to_string(),
+        Rule::number => pair.as_str().to_string(),
+        Rule::pi => "PI".to_string(),
 
-        // Operators
-        Rule::ADD => "加".to_string(),
-        Rule::SUB => "减".to_string(),
-        Rule::MUL_SYMBOL => "乘".to_string(),
-        Rule::DIV_SYMBOL => "除以".to_string(),
+        Rule::op_add => "加".to_string(),
+        Rule::op_sub => "减".to_string(),
+        Rule::op_mul => "乘".to_string(),
+        Rule::op_div => "除以".to_string(),
 
-        // Comparison operators
-        Rule::EQUAL => "等于".to_string(),
-        Rule::NOT_EQUAL => "不等于".to_string(),
-        Rule::LT => "小于".to_string(),
-        Rule::GT => "大于".to_string(),
-        Rule::LTE => "小于等于".to_string(),
-        Rule::GTE => "大于等于".to_string(),
-        Rule::APPROX => "约等于".to_string(),
-        Rule::NOT_APPROX => "不约等于".to_string(),
-        _ => pair.to_string(),
+        Rule::op_eq => "等于".to_string(),
+        Rule::op_neq => "不等于".to_string(),
+        Rule::op_lt => "小于".to_string(),
+        Rule::op_gt => "大于".to_string(),
+        Rule::op_lte => "小于等于".to_string(),
+        Rule::op_gte => "大于等于".to_string(),
+        Rule::op_approx => "约等于".to_string(),
+        Rule::op_napprox => "不约等于".to_string(),
+
+        _ => pair.as_str().to_string(),
     }
 }
 
 #[pyfunction]
 pub fn parse_latex(latex: String) -> String {
 
-    let parse_res = LatexParser::parse(Rule::latex_string, &latex).expect("parse_error");
+    let parse_res = LatexParser::parse(Rule::input, &latex).expect("parse_error");
 
     parse_res.map(|pair| transform(pair)).collect::<Vec<String>>().join("\n")
 

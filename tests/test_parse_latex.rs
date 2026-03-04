@@ -8,7 +8,7 @@ fn p(input: &str) -> String {
 
 fn assert_parse_fail(input: &str) {
     assert!(
-        LatexParser::parse(Rule::latex_string, input).is_err(),
+        LatexParser::parse(Rule::input, input).is_err(),
         "expected parse failure for: {input}"
     );
 }
@@ -53,84 +53,84 @@ fn negative_decimal() {
 // ── 4. Arithmetic operations ─────────────────────────────
 #[test]
 fn addition() {
-    assert_eq!(p("1 + 2"), "1 加 2");
+    assert_eq!(p("1 + 2"), "1加2");
 }
 
 #[test]
 fn subtraction() {
-    assert_eq!(p("5 - 3"), "5 减 3");
+    assert_eq!(p("5 - 3"), "5减3");
 }
 
 #[test]
 fn multiplication_asterisk() {
-    assert_eq!(p("2 * 3"), "2 乘 3");
+    assert_eq!(p("2 * 3"), "2乘3");
 }
 
 #[test]
 fn multiplication_times() {
-    assert_eq!(p("2 \\times 3"), "2 乘 3");
+    assert_eq!(p("2 \\times 3"), "2乘3");
 }
 
 #[test]
 fn multiplication_cdot() {
-    assert_eq!(p("2 \\cdot 3"), "2 乘 3");
+    assert_eq!(p("2 \\cdot 3"), "2乘3");
 }
 
 #[test]
 fn division_slash() {
-    assert_eq!(p("6 / 2"), "6 除以 2");
+    assert_eq!(p("6 / 2"), "6除以2");
 }
 
 #[test]
 fn division_cmd() {
-    assert_eq!(p("6 \\div 2"), "6 除以 2");
+    assert_eq!(p("6 \\div 2"), "6除以2");
 }
 
 // ── 5. Chained expressions ───────────────────────────────
 #[test]
 fn chained_operations() {
-    assert_eq!(p("1 + 2 * 3"), "1 加 2 乘 3");
+    assert_eq!(p("1 + 2 * 3"), "1加2乘3");
 }
 
 #[test]
 fn chained_add_sub() {
-    assert_eq!(p("1 + 2 - 3"), "1 加 2 减 3");
+    assert_eq!(p("1 + 2 - 3"), "1加2减3");
 }
 
 #[test]
 fn long_chain() {
-    assert_eq!(p("1 + 2 * 3 - 4 / 5"), "1 加 2 乘 3 减 4 除以 5");
+    assert_eq!(p("1 + 2 * 3 - 4 / 5"), "1加2乘3减4除以5");
 }
 
 // ── 6. Parenthesized expressions ─────────────────────────
 #[test]
 fn parenthesized_expr() {
-    assert_eq!(p("(1 + 2)"), "1 加 2");
+    assert_eq!(p("(1 + 2)"), "1加2");
 }
 
 #[test]
 fn paren_with_outer_op() {
-    assert_eq!(p("(1 + 2) * 3"), "1 加 2 乘 3");
+    assert_eq!(p("(1 + 2) * 3"), "1加2乘3");
 }
 
 #[test]
 fn nested_parens() {
-    assert_eq!(p("((1 + 2))"), "1 加 2");
+    assert_eq!(p("((1 + 2))"), "1加2");
 }
 
 #[test]
 fn negative_in_paren() {
-    assert_eq!(p("(-1 + 2)"), "负1 加 2");
+    assert_eq!(p("(-1 + 2)"), "负1加2");
 }
 
 #[test]
 fn paren_both_sides() {
-    assert_eq!(p("(1 + 2) + (3 + 4)"), "1 加 2 加 3 加 4");
+    assert_eq!(p("(1 + 2) + (3 + 4)"), "1加2加3加4");
 }
 
 #[test]
 fn complex_paren_expr() {
-    assert_eq!(p("(-1.2 + 3) + 1 * 2"), "负1.2 加 3 加 1 乘 2");
+    assert_eq!(p("(-1.2 + 3) + 1 * 2"), "负1.2加3加1乘2");
 }
 
 // ── 7. Fractions ───────────────────────────────────────────
@@ -161,7 +161,7 @@ fn fraction_with_negative() {
 
 #[test]
 fn fraction_in_expr() {
-    assert_eq!(p("\\frac{1}{2} + 3"), "2分之1 加 3");
+    assert_eq!(p("\\frac{1}{2} + 3"), "2分之1加3");
 }
 
 // ── 8. Percentages ────────────────────────────────────────
@@ -183,67 +183,67 @@ fn percentage_in_fraction() {
 // ── 9. Comparison operators ──────────────────────────────
 #[test]
 fn equal() {
-    assert_eq!(p("1 = 2"), "1 等于 2");
+    assert_eq!(p("1 = 2"), "1等于2");
 }
 
 #[test]
 fn not_equal_neq() {
-    assert_eq!(p("1 \\neq 2"), "1 不等于 2");
+    assert_eq!(p("1 \\neq 2"), "1不等于2");
 }
 
 #[test]
 fn not_equal_ne() {
-    assert_eq!(p("1 \\ne 2"), "1 不等于 2");
+    assert_eq!(p("1 \\ne 2"), "1不等于2");
 }
 
 #[test]
 fn less_than() {
-    assert_eq!(p("1 < 2"), "1 小于 2");
+    assert_eq!(p("1 < 2"), "1小于2");
 }
 
 #[test]
 fn less_than_cmd() {
-    assert_eq!(p("1 \\lt 2"), "1 小于 2");
+    assert_eq!(p("1 \\lt 2"), "1小于2");
 }
 
 #[test]
 fn greater_than() {
-    assert_eq!(p("2 > 1"), "2 大于 1");
+    assert_eq!(p("2 > 1"), "2大于1");
 }
 
 #[test]
 fn greater_than_cmd() {
-    assert_eq!(p("2 \\gt 1"), "2 大于 1");
+    assert_eq!(p("2 \\gt 1"), "2大于1");
 }
 
 #[test]
 fn less_than_equal_le() {
-    assert_eq!(p("1 \\le 2"), "1 小于等于 2");
+    assert_eq!(p("1 \\le 2"), "1小于等于2");
 }
 
 #[test]
 fn less_than_equal_leq() {
-    assert_eq!(p("1 \\leq 2"), "1 小于等于 2");
+    assert_eq!(p("1 \\leq 2"), "1小于等于2");
 }
 
 #[test]
 fn greater_than_equal_ge() {
-    assert_eq!(p("2 \\ge 1"), "2 大于等于 1");
+    assert_eq!(p("2 \\ge 1"), "2大于等于1");
 }
 
 #[test]
 fn greater_than_equal_geq() {
-    assert_eq!(p("2 \\geq 1"), "2 大于等于 1");
+    assert_eq!(p("2 \\geq 1"), "2大于等于1");
 }
 
 #[test]
 fn approx_cmd() {
-    assert_eq!(p("\\pi \\approx 3.14"), "PI 约等于 3.14");
+    assert_eq!(p("\\pi \\approx 3.14"), "PI约等于3.14");
 }
 
 #[test]
 fn approx_unicode() {
-    assert_eq!(p("\\pi ≈ 3.14"), "PI 约等于 3.14");
+    assert_eq!(p("\\pi ≈ 3.14"), "PI约等于3.14");
 }
 
 // ── 10. Parse failures (reject invalid input) ─────────────
@@ -276,7 +276,7 @@ fn whitespace_variations() {
 
 #[test]
 fn tab_and_newline() {
-    assert_eq!(p("1\t+\n2"), "1 加 2");
+    assert_eq!(p("1\t+\n2"), "1加2");
 }
 
 // ── 12. Complex expressions ──────────────────────────────
@@ -287,7 +287,7 @@ fn fraction_with_percentage_denominator() {
 
 #[test]
 fn fraction_plus_number() {
-    assert_eq!(p("\\frac{1}{3} + \\frac{2}{3}"), "3分之1 加 3分之2");
+    assert_eq!(p("\\frac{1}{3} + \\frac{2}{3}"), "3分之1加3分之2");
 }
 
 #[test]
@@ -297,13 +297,32 @@ fn negative_fraction() {
 
 #[test]
 fn pi_in_expression() {
-    assert_eq!(p("2 * \\pi"), "2 乘 PI");
+    assert_eq!(p("2 * \\pi"), "2乘PI");
 }
 
 #[test]
 fn complex_mixed_expr() {
     assert_eq!(
         p("\\frac{1}{2} + 3 * (4 - 5)"),
-        "2分之1 加 3 乘 4 减 5"
+        "2分之1加3乘4减5"
     );
 }
+
+#[test]
+fn pm_expression() {
+    assert_eq!(p("\\pm2"), "正负2");
+    assert_eq!(p("\\mp\\frac{1}{2}"), "正负2分之1");
+    assert_eq!(p("±1+2"), "正负1加2");
+}
+
+#[test]
+fn sqrt_expression() {
+    assert_eq!(p("\\sqrt{2}"), "根号2");
+}
+
+#[test]
+fn degree_expression() {
+    assert_eq!(p("100\\degree"), "100度");
+}
+
+

@@ -120,7 +120,7 @@ from latex2chin import parse_chinese, configure
 configure(api_key="sk-xxx")
 
 result = parse_chinese(
-    "同学们好,让我们来看下面这道题,题目给出式子:\\frac{1}{2}+3*4,"
+    "让我们来看下面这道题,题目给出式子:\\frac{1}{2}+3*4,"
     "为了处理这个式子,我们可以先计算3*4"
 )
 print(result)

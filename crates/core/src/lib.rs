@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod builder;
 pub mod latex_parser;
+pub mod translator;
 
 use latex_parser::{LatexParser, Rule};
 use pest::{iterators::Pair, Parser};

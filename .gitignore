@@ -8,3 +8,6 @@ __pycache__
 *.pyd
 *.so
 
+
+# Task planning files
+tasks.json

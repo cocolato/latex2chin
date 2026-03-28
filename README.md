@@ -17,20 +17,10 @@
 ### 使用 uv（推荐）
 
 ```bash
-# 克隆仓库
 git clone https://github.com/cocolato/latex2chin.git
 cd latex2chin
-
-# 创建虚拟环境并安装依赖
-uv venv
+uv sync
 source .venv/bin/activate
-uv pip install maturin
-
-# 构建并安装到当前环境
-maturin develop
-
-# 安装 Python 依赖
-uv pip install -e .
 ```
 
 ### 使用 pip
@@ -80,7 +70,8 @@ from latex2chin import parse_latex
 parse_latex("1 + 2")           # "1加2"
 parse_latex("-3.14")           # "负3.14"
 parse_latex("\\frac{1}{2}")    # "2分之1"
-parse_latex("\\sqrt{2}")       # "根号2"
+parse_latex("\\sqrt{2}")       # "2的平方根"
+parse_latex("\\sqrt[3]{8}")    # "8的立方根"
 parse_latex("50%")             # "百分之50"
 parse_latex("100\\degree")     # "100度"
 parse_latex("\\pm2")           # "正负2"
@@ -116,18 +107,28 @@ parse_latex("1 \\leq 2")      # "1小于等于2"
 ```python
 from latex2chin import parse_chinese, configure
 
-# 方式一：通过 configure 全局设置 API Key
-configure(api_key="sk-xxx")
+# 方式一：通过 configure 全局设置
+configure(
+    api_key="sk-xxx",
+    base_url="https://api.deepseek.com",
+    model="deepseek-chat",
+)
 
 result = parse_chinese(
     "让我们来看下面这道题,题目给出式子:\\frac{1}{2}+3*4,"
     "为了处理这个式子,我们可以先计算3*4"
 )
 print(result)
-# Agent 会自动识别其中的 \frac{1}{2}、3*4 等表达式并转换为中文
+# 让我们来看下面这道题,题目给出式子:2分之1加3乘4,为了处理这个式子,我们可以先计算3乘4
 
 # 方式二：调用时直接传入
-result = parse_chinese("求解 \\sqrt{2} + \\pi", api_key="sk-xxx")
+result = parse_chinese(
+    "求解 \\sqrt{2} + \\pi",
+    api_key="sk-xxx",
+    base_url="https://api.deepseek.com",
+    model="deepseek-chat",
+)
+# 求解 2的平方根加派
 ```
 
 ---
@@ -179,7 +180,7 @@ print(settings.model)
 
 ### 基础语法
 
-| 类别 | 语法示例 | 中文输出 |
+| 类别 | 语法示例 | 输出 |
 |------|---------|---------|
 | 整数/小数 | `42`, `3.14` | `42`, `3.14` |
 | 变量 | `x`, `A`, `n` | `x`, `A`, `n` |
@@ -189,26 +190,27 @@ print(settings.model)
 | 乘法 | `2 * 3`, `2 \times 3`, `2 \cdot 3` | `2乘3` |
 | 除法 | `6 / 2`, `6 \div 2` | `6除以2` |
 | 分数 | `\frac{1}{2}`, `\dfrac{1}{2}`, `\tfrac{1}{2}` | `2分之1` |
-| 根号 | `\sqrt{2}` | `根号2` |
-| N次根号 | `\sqrt[3]{8}` | `3次根号8` |
+| 根号 | `\sqrt{2}` | `2的平方根` |
+| 立方根 | `\sqrt[3]{8}` | `8的立方根` |
+| N次方根 | `\sqrt[n]{x}` | `x的n次方根` |
 | 正负 | `\pm 2`, `±2` | `正负2` |
 | 负正 | `\mp 2` | `负正2` |
 | 百分号 | `50%` | `百分之50` |
 | 度数 | `100\degree`, `100°` | `100度` |
-| 括号 | `(1 + 2)` | `1加2` |
+| 括号 | `(1 + 2)` | `1加2`（括号省略）|
 
 ### 上标与下标
 
-| 类别 | 语法示例 | 中文输出 |
+| 类别 | 语法示例 | 输出 |
 |------|---------|---------|
 | 平方 | `x^2` | `x的平方` |
 | 立方 | `x^3` | `x的立方` |
 | N次方 | `x^n`, `x^{n+1}` | `x的n次方`, `x的n加1次方` |
-| 下标 | `a_n`, `a_{n+1}` | `a下标n`, `a下标n加1` |
+| 下标 | `a_1`, `a_{n+1}` | `a1`, `an加1` |
 
 ### 比较运算符
 
-| 类别 | 语法示例 | 中文输出 |
+| 类别 | 语法示例 | 输出 |
 |------|---------|---------|
 | 等于 | `=` | `等于` |
 | 不等于 | `\neq`, `\ne` | `不等于` |
@@ -221,7 +223,7 @@ print(settings.model)
 
 ### 希腊字母
 
-| 语法 | 中文 |
+| 语法 | 输出 |
 |------|------|
 | `\alpha` | `阿尔法` |
 | `\beta` | `贝塔` |
@@ -238,63 +240,63 @@ print(settings.model)
 
 ### 三角函数
 
-| 语法 | 中文 |
+| 语法 | 输出 |
 |------|------|
-| `\sin x` | `正弦x` |
-| `\cos x` | `余弦x` |
-| `\tan x` | `正切x` |
-| `\cot x` | `余切x` |
-| `\sec x` | `正割x` |
-| `\csc x` | `余割x` |
+| `\sin x` | `sinx` |
+| `\cos x` | `cosx` |
+| `\tan x` | `tanx` |
+| `\cot x` | `cotx` |
+| `\sec x` | `secx` |
+| `\csc x` | `cscx` |
 
 ### 对数函数
 
-| 语法 | 中文 |
+| 语法 | 输出 |
 |------|------|
-| `\log x` | `对数x` |
-| `\ln x` | `自然对数x` |
-| `\lg x` | `常用对数x` |
+| `\log x` | `logx` |
+| `\ln x` | `lnx` |
+| `\lg x` | `以10为底的对数x` |
 
 ### 微积分
 
-| 类别 | 语法示例 | 中文输出 |
+| 类别 | 语法示例 | 输出 |
 |------|---------|---------|
-| 极限 | `\lim_{x \to 0} x` | `当x趋向于0时的极限x` |
-| 求和 | `\sum_{i=1}^{n} i` | `i从1到n求和i` |
-| 求积 | `\prod_{i=1}^{n} i` | `i从1到n求积i` |
-| 积分 | `\int_{a}^{b} x` | `从a到b积分x` |
+| 极限 | `\lim_{x \to 0} x` | `x趋近于0时x的极限` |
+| 求和 | `\sum_{i=1}^{n} i` | `对i从1到n的i求和` |
+| 求积 | `\prod_{i=1}^{n} i` | `对i从1到n求积` |
+| 积分 | `\int_{a}^{b} x` | `从a到b的x的定积分` |
 
 ### 集合论
 
-| 语法 | 中文 |
+| 语法 | 输出 |
 |------|------|
-| `\in` | `属于` |
-| `\notin` | `不属于` |
-| `\cup` | `并` |
-| `\cap` | `交` |
-| `\subset` | `真子集` |
-| `\supset` | `真超集` |
+| `x \in A` | `x属于A` |
+| `x \notin A` | `x不属于A` |
+| `A \cup B` | `A并B` |
+| `A \cap B` | `A交B` |
+| `A \subset B` | `A是B的子集` |
+| `A \supset B` | `A是B的超集` |
 | `\emptyset` | `空集` |
 
 ### 逻辑符号
 
-| 语法 | 中文 |
+| 语法 | 输出 |
 |------|------|
-| `\forall` | `任意` |
-| `\exists` | `存在` |
-| `\Rightarrow`, `\implies` | `推出` |
-| `\iff`, `\Leftrightarrow` | `等价于` |
+| `P \forall x` | `P任意x` |
+| `P \exists x` | `P存在x` |
+| `A \Rightarrow B`, `A \implies B` | `A推出B` |
+| `A \iff B`, `A \Leftrightarrow B` | `A等价于B` |
 
 ### 几何符号
 
-| 语法 | 中文（二元运算） | 中文（单独） |
+| 语法 | 输出（二元运算） | 输出（单独使用） |
 |------|-----------------|-------------|
-| `\triangle` | - | `三角形` |
-| `\angle` | - | `角` |
-| `\parallel` | `平行于` | `平行` |
-| `\perp` | `垂直于` | `垂直` |
-| `\cong` | `全等于` | `全等` |
-| `\sim` | `相似于` | `相似` |
+| `\triangle` | — | `三角形` |
+| `\angle` | — | `角` |
+| `A \parallel B` | `A平行于B` | — |
+| `A \perp B` | `A垂直于B` | — |
+| `A \cong B` | `A全等于B` | — |
+| `A \sim B` | `A相似于B` | — |
 
 ---
 

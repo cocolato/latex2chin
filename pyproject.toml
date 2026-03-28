@@ -17,4 +17,9 @@ dependencies = [
 [tool.maturin]
 features = ["pyo3/extension-module"]
 python-source = "python"
-manifest-path = "crates/py"
+manifest-path = "crates/py/Cargo.toml"
+
+[dependency-groups]
+dev = [
+    "httpx[socks]>=0.28.1",
+]

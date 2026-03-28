@@ -66,9 +66,16 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "latex2chin"
 version = "0.1.0"
 dependencies = [
+ "latex2chin-core",
+ "pyo3",
+]
+
+[[package]]
+name = "latex2chin-core"
+version = "0.1.0"
+dependencies = [
  "pest",
  "pest_derive",
- "pyo3",
 ]
 
 [[package]]

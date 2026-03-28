@@ -1,13 +1,6 @@
-[package]
-name = "latex2chin"
-version = "0.1.0"
-edition = "2024"
-
-[lib]
-name = "latex2chin"
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-pest = "2.8.6"
-pest_derive = "2.8.6"
-pyo3 = { version = "0.28.2", features = ["extension-module"] }
+[workspace]
+members = [
+    "crates/core",
+    "crates/py",
+]
+resolver = "3"

@@ -1,9 +1,9 @@
-use latex2chin::parse_latex;
-use latex2chin::latex_parser::{LatexParser, Rule};
+use latex2chin_core::latex_parser::{LatexParser, Rule};
+use latex2chin_core::parse_latex;
 use pest::Parser;
 
 fn p(input: &str) -> String {
-    parse_latex(input.to_string())
+    parse_latex(input)
 }
 
 fn assert_parse_fail(input: &str) {
@@ -13,7 +13,7 @@ fn assert_parse_fail(input: &str) {
     );
 }
 
-// ── 1. Plain numbers ─────────────────────────────────────
+// -- 1. Plain numbers -----------------------------------------
 #[test]
 fn number_integer() {
     assert_eq!(p("1"), "1");
@@ -28,13 +28,13 @@ fn number_decimal() {
     assert_eq!(p("100.00"), "100.00");
 }
 
-// ── 2. Constants ─────────────────────────────────────────
+// -- 2. Constants --------------------------------------------
 #[test]
 fn pi_constant() {
     assert_eq!(p("\\pi"), "PI");
 }
 
-// ── 3. Signs (signed_expr) ───────────────────────────────
+// -- 3. Signs (signed_expr) ----------------------------------
 #[test]
 fn positive_number() {
     assert_eq!(p("+5"), "正5");
@@ -50,7 +50,7 @@ fn negative_decimal() {
     assert_eq!(p("-1.2"), "负1.2");
 }
 
-// ── 4. Arithmetic operations ─────────────────────────────
+// -- 4. Arithmetic operations --------------------------------
 #[test]
 fn addition() {
     assert_eq!(p("1 + 2"), "1加2");
@@ -86,7 +86,7 @@ fn division_cmd() {
     assert_eq!(p("6 \\div 2"), "6除以2");
 }
 
-// ── 5. Chained expressions ───────────────────────────────
+// -- 5. Chained expressions ----------------------------------
 #[test]
 fn chained_operations() {
     assert_eq!(p("1 + 2 * 3"), "1加2乘3");
@@ -102,7 +102,7 @@ fn long_chain() {
     assert_eq!(p("1 + 2 * 3 - 4 / 5"), "1加2乘3减4除以5");
 }
 
-// ── 6. Parenthesized expressions ─────────────────────────
+// -- 6. Parenthesized expressions ----------------------------
 #[test]
 fn parenthesized_expr() {
     assert_eq!(p("(1 + 2)"), "1加2");
@@ -133,7 +133,7 @@ fn complex_paren_expr() {
     assert_eq!(p("(-1.2 + 3) + 1 * 2"), "负1.2加3加1乘2");
 }
 
-// ── 7. Fractions ───────────────────────────────────────────
+// -- 7. Fractions --------------------------------------------
 #[test]
 fn simple_fraction() {
     assert_eq!(p("\\frac{1}{2}"), "2分之1");
@@ -164,7 +164,7 @@ fn fraction_in_expr() {
     assert_eq!(p("\\frac{1}{2} + 3"), "2分之1加3");
 }
 
-// ── 8. Percentages ────────────────────────────────────────
+// -- 8. Percentages ------------------------------------------
 #[test]
 fn percentage_simple() {
     assert_eq!(p("50%"), "百分之50");
@@ -180,7 +180,7 @@ fn percentage_in_fraction() {
     assert_eq!(p("\\frac{1}{20%}"), "百分之20分之1");
 }
 
-// ── 9. Comparison operators ──────────────────────────────
+// -- 9. Comparison operators ---------------------------------
 #[test]
 fn equal() {
     assert_eq!(p("1 = 2"), "1等于2");
@@ -246,7 +246,7 @@ fn approx_unicode() {
     assert_eq!(p("\\pi ≈ 3.14"), "PI约等于3.14");
 }
 
-// ── 10. Parse failures (reject invalid input) ─────────────
+// -- 10. Parse failures (reject invalid input) ---------------
 #[test]
 fn reject_empty() {
     assert_parse_fail("");
@@ -267,7 +267,7 @@ fn reject_trailing_operator() {
     assert_parse_fail("1 +");
 }
 
-// ── 11. Whitespace handling ───────────────────────────────
+// -- 11. Whitespace handling ---------------------------------
 #[test]
 fn whitespace_variations() {
     assert_eq!(p("1+2"), p("1 + 2"));
@@ -279,7 +279,7 @@ fn tab_and_newline() {
     assert_eq!(p("1\t+\n2"), "1加2");
 }
 
-// ── 12. Complex expressions ──────────────────────────────
+// -- 12. Complex expressions ---------------------------------
 #[test]
 fn fraction_with_percentage_denominator() {
     assert_eq!(p("\\frac{1}{20%}"), "百分之20分之1");
@@ -302,10 +302,7 @@ fn pi_in_expression() {
 
 #[test]
 fn complex_mixed_expr() {
-    assert_eq!(
-        p("\\frac{1}{2} + 3 * (4 - 5)"),
-        "2分之1加3乘4减5"
-    );
+    assert_eq!(p("\\frac{1}{2} + 3 * (4 - 5)"), "2分之1加3乘4减5");
 }
 
 #[test]
@@ -324,5 +321,3 @@ fn sqrt_expression() {
 fn degree_expression() {
     assert_eq!(p("100\\degree"), "100度");
 }
-
-

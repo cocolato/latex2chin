@@ -11,3 +11,6 @@ __pycache__
 
 # Task planning files
 tasks.json
+
+# Task progress files
+PROGRESS.txt

@@ -322,7 +322,7 @@ fn pm_expression() {
 
 #[test]
 fn sqrt_expression() {
-    assert_eq!(p("\\sqrt{2}"), "根号2");
+    assert_eq!(p("\\sqrt{2}"), "2的平方根");
 }
 
 #[test]
@@ -395,94 +395,94 @@ fn superscript_number_squared() {
 // -- 15. Subscripts ------------------------------------------
 #[test]
 fn subscript_simple() {
-    assert_eq!(p("a_1"), "a下标1");
+    assert_eq!(p("a_1"), "a1");
 }
 
 #[test]
 fn subscript_braced() {
-    assert_eq!(p("a_{n+1}"), "a下标n加1");
+    assert_eq!(p("a_{n+1}"), "an加1");
 }
 
 #[test]
 fn subscript_identifier() {
-    assert_eq!(p("x_n"), "x下标n");
+    assert_eq!(p("x_n"), "xn");
 }
 
 #[test]
 fn subscript_in_expression() {
-    assert_eq!(p("a_1 + a_2"), "a下标1加a下标2");
+    assert_eq!(p("a_1 + a_2"), "a1加a2");
 }
 
 // -- 16. Trig functions (Chinese names) ----------------------
 #[test]
 fn sin_function() {
-    assert_eq!(p("\\sin x"), "正弦x");
+    assert_eq!(p("\\sin x"), "sinx");
 }
 
 #[test]
 fn cos_function() {
-    assert_eq!(p("\\cos x"), "余弦x");
+    assert_eq!(p("\\cos x"), "cosx");
 }
 
 #[test]
 fn tan_function() {
-    assert_eq!(p("\\tan x"), "正切x");
+    assert_eq!(p("\\tan x"), "tanx");
 }
 
 #[test]
 fn sin_with_group() {
-    assert_eq!(p("\\sin(x + 1)"), "正弦x加1");
+    assert_eq!(p("\\sin(x + 1)"), "sinx加1");
 }
 
 #[test]
 fn sin_with_braces() {
-    assert_eq!(p("\\sin{x}"), "正弦x");
+    assert_eq!(p("\\sin{x}"), "sinx");
 }
 
 #[test]
 fn sin_with_number() {
-    assert_eq!(p("\\sin 5"), "正弦5");
+    assert_eq!(p("\\sin 5"), "sin5");
 }
 
 #[test]
 fn cot_function() {
-    assert_eq!(p("\\cot x"), "余切x");
+    assert_eq!(p("\\cot x"), "cotx");
 }
 
 #[test]
 fn sec_function() {
-    assert_eq!(p("\\sec x"), "正割x");
+    assert_eq!(p("\\sec x"), "secx");
 }
 
 #[test]
 fn csc_function() {
-    assert_eq!(p("\\csc x"), "余割x");
+    assert_eq!(p("\\csc x"), "cscx");
 }
 
 // -- 17. Log functions ---------------------------------------
 #[test]
 fn log_function() {
-    assert_eq!(p("\\log x"), "对数x");
+    assert_eq!(p("\\log x"), "logx");
 }
 
 #[test]
 fn ln_function() {
-    assert_eq!(p("\\ln x"), "自然对数x");
+    assert_eq!(p("\\ln x"), "lnx");
 }
 
 #[test]
 fn lg_function() {
-    assert_eq!(p("\\lg x"), "常用对数x");
+    assert_eq!(p("\\lg x"), "以10为底的对数x");
 }
 
 #[test]
 fn log_with_braces() {
-    assert_eq!(p("\\log{x}"), "对数x");
+    assert_eq!(p("\\log{x}"), "logx");
 }
 
 #[test]
 fn log_with_group() {
-    assert_eq!(p("\\log(x + 1)"), "对数x加1");
+    assert_eq!(p("\\log(x + 1)"), "logx加1");
 }
 
 // -- 18. Greek letters (Chinese transliterations) -------------
@@ -556,56 +556,56 @@ fn greek_in_expression() {
 // -- 19. Nth root --------------------------------------------
 #[test]
 fn nth_root_cubic() {
-    assert_eq!(p("\\sqrt[3]{8}"), "3次根号8");
+    assert_eq!(p("\\sqrt[3]{8}"), "8的立方根");
 }
 
 #[test]
 fn nth_root_general() {
-    assert_eq!(p("\\sqrt[n]{x}"), "n次根号x");
+    assert_eq!(p("\\sqrt[n]{x}"), "x的n次方根");
 }
 
 #[test]
 fn nth_root_in_expression() {
-    assert_eq!(p("\\sqrt[3]{8} + 1"), "3次根号8加1");
+    assert_eq!(p("\\sqrt[3]{8} + 1"), "8的立方根加1");
 }
 
 // -- 20. Calculus: limit -------------------------------------
 #[test]
 fn limit_simple() {
-    assert_eq!(p("\\lim_{x \\to 0} x"), "当x趋向于0时的极限x");
+    assert_eq!(p("\\lim_{x \\to 0} x"), "x趋近于0时x的极限");
 }
 
 #[test]
 fn limit_with_expr() {
-    assert_eq!(p("\\lim_{x \\to 0} x + 1"), "当x趋向于0时的极限x加1");
+    assert_eq!(p("\\lim_{x \\to 0} x + 1"), "x趋近于0时x的极限加1");
 }
 
 // -- 21. Calculus: sum ---------------------------------------
 #[test]
 fn sum_simple() {
-    assert_eq!(p("\\sum_{i=1}^{n} i"), "i从1到n求和i");
+    assert_eq!(p("\\sum_{i=1}^{n} i"), "对i从1到n的i求和");
 }
 
 #[test]
 fn sum_with_frac() {
-    assert_eq!(p("\\sum_{i=1}^{n} \\frac{1}{i}"), "i从1到n求和i分之1");
+    assert_eq!(p("\\sum_{i=1}^{n} \\frac{1}{i}"), "对i从1到n的i分之1求和");
 }
 
 // -- 22. Calculus: product -----------------------------------
 #[test]
 fn product_simple() {
-    assert_eq!(p("\\prod_{i=1}^{n} i"), "i从1到n求积i");
+    assert_eq!(p("\\prod_{i=1}^{n} i"), "对i从1到n求积");
 }
 
 // -- 23. Calculus: integral ----------------------------------
 #[test]
 fn integral_simple() {
-    assert_eq!(p("\\int_{0}^{1} x"), "从0到1积分x");
+    assert_eq!(p("\\int_{0}^{1} x"), "从0到1的x的定积分");
 }
 
 #[test]
 fn integral_with_expression() {
-    assert_eq!(p("\\int_{a}^{b} x + 1"), "从a到b积分x加1");
+    assert_eq!(p("\\int_{a}^{b} x + 1"), "从a到b的x的定积分加1");
 }
 
 // -- 24. Set theory operators --------------------------------
@@ -631,12 +631,12 @@ fn set_cap() {
 
 #[test]
 fn set_subset() {
-    assert_eq!(p("A \\subset B"), "A真子集B");
+    assert_eq!(p("A \\subset B"), "A是B的子集");
 }
 
 #[test]
 fn set_superset() {
-    assert_eq!(p("A \\supset B"), "A真超集B");
+    assert_eq!(p("A \\supset B"), "A是B的超集");
 }
 
 #[test]
@@ -737,7 +737,7 @@ fn subscript_then_superscript() {
 
 #[test]
 fn function_in_expression() {
-    assert_eq!(p("\\sin x + \\cos x"), "正弦x加余弦x");
+    assert_eq!(p("\\sin x + \\cos x"), "sinx加cosx");
 }
 
 #[test]
@@ -836,12 +836,12 @@ fn error_message_is_helpful() {
 // -- 32. Complex nested expressions --------------------------
 #[test]
 fn nested_frac_sqrt_superscript() {
-    assert_eq!(p("\\frac{\\sqrt{x^2+1}}{2}"), "2分之根号x的平方加1");
+    assert_eq!(p("\\frac{\\sqrt{x^2+1}}{2}"), "2分之x的平方加1的平方根");
 }
 
 #[test]
 fn complex_mixed_with_functions() {
-    assert_eq!(p("\\sin x + \\cos x"), "正弦x加余弦x");
+    assert_eq!(p("\\sin x + \\cos x"), "sinx加cosx");
 }
 
 #[test]
@@ -872,17 +872,17 @@ fn triangle_similar_triangle() {
 // -- 34. Calculus in context ---------------------------------
 #[test]
 fn limit_x_squared() {
-    assert_eq!(p("\\lim_{x \\to 0} x^2"), "当x趋向于0时的极限x的平方");
+    assert_eq!(p("\\lim_{x \\to 0} x^2"), "x趋近于0时x的平方的极限");
 }
 
 #[test]
 fn sum_i_from_1_to_n() {
-    assert_eq!(p("\\sum_{i=1}^{n} i"), "i从1到n求和i");
+    assert_eq!(p("\\sum_{i=1}^{n} i"), "对i从1到n的i求和");
 }
 
 #[test]
 fn integral_from_a_to_b() {
-    assert_eq!(p("\\int_{a}^{b} f"), "从a到b积分f");
+    assert_eq!(p("\\int_{a}^{b} f"), "从a到b的f的定积分");
 }
 
 // -- 35. Multiple Greek in expression ------------------------
@@ -899,14 +899,14 @@ fn pi_in_fraction() {
 // -- 36. Subscript and superscript combined ------------------
 #[test]
 fn subscript_with_number() {
-    assert_eq!(p("a_1"), "a下标1");
-    assert_eq!(p("a_2"), "a下标2");
+    assert_eq!(p("a_1"), "a1");
+    assert_eq!(p("a_2"), "a2");
 }
 
 #[test]
 fn subscript_with_identifier() {
-    assert_eq!(p("x_n"), "x下标n");
-    assert_eq!(p("a_i"), "a下标i");
+    assert_eq!(p("x_n"), "xn");
+    assert_eq!(p("a_i"), "ai");
 }
 
 // -- 37. Degree and percent edge cases -----------------------
@@ -923,23 +923,23 @@ fn percent_with_integer() {
 // -- 38. Nth root variants -----------------------------------
 #[test]
 fn sqrt_square_root() {
-    assert_eq!(p("\\sqrt{9}"), "根号9");
+    assert_eq!(p("\\sqrt{9}"), "9的平方根");
 }
 
 #[test]
 fn sqrt_cubic_root() {
-    assert_eq!(p("\\sqrt[3]{27}"), "3次根号27");
+    assert_eq!(p("\\sqrt[3]{27}"), "27的立方根");
 }
 
 // -- 39. Function with complex argument ----------------------
 #[test]
 fn sin_with_complex_arg() {
-    assert_eq!(p("\\sin(x + 1)"), "正弦x加1");
+    assert_eq!(p("\\sin(x + 1)"), "sinx加1");
 }
 
 #[test]
 fn log_with_complex_arg() {
-    assert_eq!(p("\\log(x * 2)"), "对数x乘2");
+    assert_eq!(p("\\log(x * 2)"), "logx乘2");
 }
 
 // -- 40. Mixed operators -------------------------------------

@@ -1,13 +1,9 @@
 use latex2chin_core::parse_latex as core_parse_latex;
 use pyo3::prelude::*;
 
-// Re-export for test compatibility
-pub use latex2chin_core::latex_parser;
-pub use latex2chin_core::parse_latex;
-
 #[pyfunction]
-pub fn parse_latex(latex: String) -> String {
-    core_parse_latex(&latex)
+pub fn parse_latex(latex: String) -> Result<String, PyErr> {
+    core_parse_latex(&latex).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
 
 #[pymodule]

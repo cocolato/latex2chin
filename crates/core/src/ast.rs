@@ -54,6 +54,8 @@ pub enum Expr {
     LogicOp(LogicOpKind, Box<Expr>, Box<Expr>),
     /// Geometry symbol: `\triangle`, `\angle`
     Geometry(GeometrySymbol),
+    /// Empty set constant: `\emptyset`, `\varnothing`
+    Emptyset,
 }
 
 /// Arithmetic operator kinds.

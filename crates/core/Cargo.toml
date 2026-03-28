@@ -9,3 +9,4 @@ name = "latex2chin_core"
 [dependencies]
 pest = "2.8.6"
 pest_derive = "2.8.6"
+thiserror = "2"

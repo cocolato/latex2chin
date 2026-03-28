@@ -137,6 +137,9 @@ pub fn translate(expr: &Expr) -> String {
 
         // -- Geometry symbols -----------------------------------------------
         Expr::Geometry(sym) => translate_geometry(sym).to_string(),
+
+        // -- Empty set constant ---------------------------------------------
+        Expr::Emptyset => "空集".to_string(),
     }
 }
 

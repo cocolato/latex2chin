@@ -4,6 +4,7 @@
 /// Every grammar rule has a corresponding builder function that
 /// produces the correct AST variant.
 use crate::ast::*;
+use crate::error::ParseError;
 use crate::latex_parser::{LatexParser, Rule};
 use pest::iterators::Pair;
 use pest::Parser;
@@ -12,19 +13,33 @@ use pest::Parser;
 ///
 /// # Errors
 ///
-/// Returns a descriptive error string if parsing fails or if the
-/// parse tree cannot be converted to a valid AST node.
-pub fn parse_to_ast(input: &str) -> Result<Expr, String> {
-    let pairs =
-        LatexParser::parse(Rule::input, input).map_err(|e| format!("Parse error: {}", e))?;
+/// Returns a `ParseError` if parsing fails or if the parse tree
+/// cannot be converted to a valid AST node.
+pub fn parse_to_ast(input: &str) -> Result<Expr, ParseError> {
+    let pairs = LatexParser::parse(Rule::input, input).map_err(|e| {
+        let pos = match e.location {
+            pest::error::InputLocation::Pos(p) => p,
+            pest::error::InputLocation::Span((s, _)) => s,
+        };
+        ParseError::SyntaxError {
+            position: pos,
+            message: e.to_string(),
+        }
+    })?;
     let input_pair = pairs
         .into_iter()
         .next()
-        .ok_or_else(|| "No input pair found".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "No input pair found".to_string(),
+        })?;
     let expr_pair = input_pair
         .into_inner()
         .find(|p| p.as_rule() == Rule::expr)
-        .ok_or_else(|| "No expr found in input".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "No expression found in input".to_string(),
+        })?;
     build_expr(expr_pair)
 }
 
@@ -41,7 +56,7 @@ pub fn parse_to_ast(input: &str) -> Result<Expr, String> {
 ///
 /// Binary operations are folded left-to-right to preserve
 /// left-to-right associativity.
-fn build_expr(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner: std::iter::Peekable<_> = pair.into_inner().peekable();
 
     // Collect leading prefix signs
@@ -55,14 +70,15 @@ fn build_expr(pair: Pair<Rule>) -> Result<Expr, String> {
     }
 
     // First term (mandatory)
-    let first_term_pair = inner
-        .next()
-        .ok_or_else(|| "Expected term in expr".to_string())?;
+    let first_term_pair = inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected term in expression".to_string(),
+    })?;
     let mut result = build_term(first_term_pair)?;
 
     // Apply leading signs in reverse order (innermost first)
     for sign_pair in leading_signs.into_iter().rev() {
-        result = apply_sign(sign_pair, result);
+        result = apply_sign(sign_pair, result)?;
     }
 
     // Fold remaining (binary_op, signs, term) groups left-to-right
@@ -84,14 +100,15 @@ fn build_expr(pair: Pair<Rule>) -> Result<Expr, String> {
         }
 
         // Next term (mandatory after an operator)
-        let next_term_pair = inner
-            .next()
-            .ok_or_else(|| "Expected term after operator".to_string())?;
+        let next_term_pair = inner.next().ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected term after operator".to_string(),
+        })?;
         let mut rhs = build_term(next_term_pair)?;
 
         // Apply trailing signs to the right-hand side (innermost first)
         for sign_pair in trailing_signs.into_iter().rev() {
-            rhs = apply_sign(sign_pair, rhs);
+            rhs = apply_sign(sign_pair, rhs)?;
         }
 
         // Build the binary expression, folding left
@@ -106,12 +123,18 @@ fn build_expr(pair: Pair<Rule>) -> Result<Expr, String> {
 // ---------------------------------------------------------------------------
 
 /// Wrap `expr` in a `Sign` node based on the sign pair (`+` or `-`).
-fn apply_sign(sign_pair: Pair<Rule>, expr: Expr) -> Expr {
-    let inner = sign_pair.into_inner().next().unwrap();
+fn apply_sign(sign_pair: Pair<Rule>, expr: Expr) -> Result<Expr, ParseError> {
+    let inner = sign_pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| ParseError::InvalidExpression("Empty sign pair".to_string()))?;
     match inner.as_rule() {
-        Rule::op_add => Expr::Sign(SignKind::Positive, Box::new(expr)),
-        Rule::op_sub => Expr::Sign(SignKind::Negative, Box::new(expr)),
-        _ => unreachable!("sign inner must be op_add or op_sub"),
+        Rule::op_add => Ok(Expr::Sign(SignKind::Positive, Box::new(expr))),
+        Rule::op_sub => Ok(Expr::Sign(SignKind::Negative, Box::new(expr))),
+        other => Err(ParseError::InvalidExpression(format!(
+            "Unexpected sign rule: {:?}",
+            other
+        ))),
     }
 }
 
@@ -154,7 +177,7 @@ fn is_binary_op_rule(rule: Rule) -> bool {
 }
 
 /// Build the correct AST binary-expression variant from an operator pair.
-fn build_binary_op(op: Pair<Rule>, lhs: Expr, rhs: Expr) -> Result<Expr, String> {
+fn build_binary_op(op: Pair<Rule>, lhs: Expr, rhs: Expr) -> Result<Expr, ParseError> {
     let l = Box::new(lhs);
     let r = Box::new(rhs);
     Ok(match op.as_rule() {
@@ -191,7 +214,12 @@ fn build_binary_op(op: Pair<Rule>, lhs: Expr, rhs: Expr) -> Result<Expr, String>
         Rule::op_similar => Expr::ComparisonOp(ComparisonOpKind::Similar, l, r),
         // Arrow operator (used in limit subscript bounds and standalone)
         Rule::op_to => Expr::ComparisonOp(ComparisonOpKind::To, l, r),
-        _ => return Err(format!("Unknown binary op rule: {:?}", op.as_rule())),
+        _ => {
+            return Err(ParseError::InvalidExpression(format!(
+                "Unknown binary op rule: {:?}",
+                op.as_rule()
+            )))
+        }
     })
 }
 
@@ -205,11 +233,12 @@ fn build_binary_op(op: Pair<Rule>, lhs: Expr, rhs: Expr) -> Result<Expr, String>
 ///
 /// Suffixes wrap the base expression: `x^2` becomes
 /// `Superscript(Identifier("x"), Number(2))`.
-fn build_term(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_term(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner = pair.into_inner();
-    let primary_pair = inner
-        .next()
-        .ok_or_else(|| "Expected primary in term".to_string())?;
+    let primary_pair = inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected primary in term".to_string(),
+    })?;
     let mut result = build_primary(primary_pair)?;
 
     for suffix in inner {
@@ -225,10 +254,10 @@ fn build_term(pair: Pair<Rule>) -> Result<Expr, String> {
             Rule::degree_mark => Expr::Degree(Box::new(result)),
             Rule::percent_mark => Expr::Percent(Box::new(result)),
             _ => {
-                return Err(format!(
+                return Err(ParseError::InvalidExpression(format!(
                     "Unexpected suffix rule in term: {:?}",
                     suffix.as_rule()
-                ))
+                )))
             }
         };
     }
@@ -246,40 +275,46 @@ fn build_term(pair: Pair<Rule>) -> Result<Expr, String> {
 ///
 /// Since `lbrace`/`rbrace` and `superscript_atom` are silent rules,
 /// the inner pair is either `expr` or an atomic rule (`number`/`identifier`/`greek`).
-fn build_superscript_content(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_superscript_content(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let inner = pair
         .into_inner()
         .next()
-        .ok_or_else(|| "Expected content in superscript".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected content in superscript".to_string(),
+        })?;
     match inner.as_rule() {
         Rule::expr => build_expr(inner),
         Rule::number => parse_number(inner),
         Rule::identifier => Ok(Expr::Identifier(inner.as_str().to_string())),
         Rule::greek => Ok(build_greek(inner)),
-        _ => Err(format!(
+        _ => Err(ParseError::InvalidExpression(format!(
             "Unexpected superscript content: {:?}",
             inner.as_rule()
-        )),
+        ))),
     }
 }
 
 /// Extract the expression inside a `subscript` pair.
 ///
 /// Grammar: `subscript = { "_" ~ (lbrace ~ expr ~ rbrace | subscript_atom) }`
-fn build_subscript_content(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_subscript_content(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let inner = pair
         .into_inner()
         .next()
-        .ok_or_else(|| "Expected content in subscript".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected content in subscript".to_string(),
+        })?;
     match inner.as_rule() {
         Rule::expr => build_expr(inner),
         Rule::number => parse_number(inner),
         Rule::identifier => Ok(Expr::Identifier(inner.as_str().to_string())),
         Rule::greek => Ok(build_greek(inner)),
-        _ => Err(format!(
+        _ => Err(ParseError::InvalidExpression(format!(
             "Unexpected subscript content: {:?}",
             inner.as_rule()
-        )),
+        ))),
     }
 }
 
@@ -291,16 +326,19 @@ fn build_subscript_content(pair: Pair<Rule>) -> Result<Expr, String> {
 ///
 /// The `primary` rule is an ordered choice; the pair wraps exactly one
 /// child matching the winning alternative.
-fn build_primary(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_primary(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let content = pair
         .into_inner()
         .next()
-        .ok_or_else(|| "Expected content in primary".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected content in primary".to_string(),
+        })?;
     build_primary_content(content)
 }
 
 /// Dispatch on the inner rule of a `primary` pair.
-fn build_primary_content(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_primary_content(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     match pair.as_rule() {
         Rule::number => parse_number(pair),
         Rule::identifier => Ok(Expr::Identifier(pair.as_str().to_string())),
@@ -311,16 +349,16 @@ fn build_primary_content(pair: Pair<Rule>) -> Result<Expr, String> {
         Rule::sqrt_n => build_sqrt_n(pair),
         Rule::function => build_function(pair),
         Rule::pm => build_pm(pair),
-        Rule::emptyset => Ok(Expr::Identifier("\\emptyset".to_string())),
+        Rule::emptyset => Ok(Expr::Emptyset),
         Rule::geometry => build_geometry(pair),
         Rule::limit_expr => build_limit(pair),
         Rule::sum_expr => build_sum(pair),
         Rule::product_expr => build_product(pair),
         Rule::integral_expr => build_integral(pair),
-        _ => Err(format!(
+        _ => Err(ParseError::InvalidExpression(format!(
             "Unexpected primary content rule: {:?}",
             pair.as_rule()
-        )),
+        ))),
     }
 }
 
@@ -329,11 +367,10 @@ fn build_primary_content(pair: Pair<Rule>) -> Result<Expr, String> {
 // ---------------------------------------------------------------------------
 
 /// Parse a `number` pair into `Expr::Number`.
-fn parse_number(pair: Pair<Rule>) -> Result<Expr, String> {
-    pair.as_str()
-        .parse::<f64>()
-        .map(Expr::Number)
-        .map_err(|e| format!("Invalid number '{}': {}", pair.as_str(), e))
+fn parse_number(pair: Pair<Rule>) -> Result<Expr, ParseError> {
+    pair.as_str().parse::<f64>().map(Expr::Number).map_err(|e| {
+        ParseError::InvalidExpression(format!("Invalid number '{}': {}", pair.as_str(), e))
+    })
 }
 
 /// Build a `Greek` expression from a `greek` pair.
@@ -362,11 +399,14 @@ fn build_greek(pair: Pair<Rule>) -> Expr {
 /// Build a `Group` expression from a `group` pair.
 ///
 /// Grammar: `group = { lparen ~ expr ~ rparen }`
-fn build_group(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_group(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let expr_pair = pair
         .into_inner()
         .next()
-        .ok_or_else(|| "Expected expr in group".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected expression in group".to_string(),
+        })?;
     Ok(Expr::Group(Box::new(build_expr(expr_pair)?)))
 }
 
@@ -377,18 +417,16 @@ fn build_group(pair: Pair<Rule>) -> Result<Expr, String> {
 /// Build a `Frac` expression.
 ///
 /// Grammar: `frac = { cmd_frac ~ lbrace ~ expr ~ rbrace ~ lbrace ~ expr ~ rbrace }`
-fn build_frac(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_frac(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner = pair.into_inner();
-    let num = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected numerator in frac".to_string())?,
-    )?;
-    let den = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected denominator in frac".to_string())?,
-    )?;
+    let num = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected numerator in fraction".to_string(),
+    })?)?;
+    let den = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected denominator in fraction".to_string(),
+    })?)?;
     Ok(Expr::Frac(Box::new(num), Box::new(den)))
 }
 
@@ -399,29 +437,30 @@ fn build_frac(pair: Pair<Rule>) -> Result<Expr, String> {
 /// Build a `Sqrt` expression.
 ///
 /// Grammar: `sqrt = { cmd_sqrt ~ lbrace ~ expr ~ rbrace }`
-fn build_sqrt(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_sqrt(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let expr_pair = pair
         .into_inner()
         .next()
-        .ok_or_else(|| "Expected expr in sqrt".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected expression in square root".to_string(),
+        })?;
     Ok(Expr::Sqrt(Box::new(build_expr(expr_pair)?)))
 }
 
 /// Build a `SqrtN` expression (nth root).
 ///
 /// Grammar: `sqrt_n = { cmd_sqrt ~ lbracket ~ expr ~ rbracket ~ lbrace ~ expr ~ rbrace }`
-fn build_sqrt_n(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_sqrt_n(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner = pair.into_inner();
-    let degree = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected degree in sqrt_n".to_string())?,
-    )?;
-    let radicand = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected radicand in sqrt_n".to_string())?,
-    )?;
+    let degree = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected degree in nth root".to_string(),
+    })?)?;
+    let radicand = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected radicand in nth root".to_string(),
+    })?)?;
     Ok(Expr::SqrtN(Box::new(degree), Box::new(radicand)))
 }
 
@@ -435,19 +474,25 @@ fn build_sqrt_n(pair: Pair<Rule>) -> Result<Expr, String> {
 ///
 /// `cmd_pm` / `cmd_mp` are silent rules, so we inspect the raw text
 /// to determine which variant was matched.
-fn build_pm(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_pm(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let raw = pair.as_str();
     let term_pair = pair
         .into_inner()
         .next()
-        .ok_or_else(|| "Expected term in pm".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected term after plus-minus".to_string(),
+        })?;
     let term_expr = build_term(term_pair)?;
     if raw.starts_with("\\pm") || raw.starts_with("\u{00b1}") {
         Ok(Expr::Pm(Box::new(term_expr)))
     } else if raw.starts_with("\\mp") || raw.starts_with("\u{2213}") {
         Ok(Expr::Mp(Box::new(term_expr)))
     } else {
-        Err(format!("Unknown pm/mp variant in: {}", raw))
+        Err(ParseError::InvalidExpression(format!(
+            "Unknown plus/minus variant in: {}",
+            raw
+        )))
     }
 }
 
@@ -461,12 +506,15 @@ fn build_pm(pair: Pair<Rule>) -> Result<Expr, String> {
 ///
 /// `cmd_func` is a silent rule; the function name is determined from the
 /// raw text of the pair.
-fn build_function(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_function(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let raw = pair.as_str();
     let arg_pair = pair
         .into_inner()
         .next()
-        .ok_or_else(|| "Expected argument in function".to_string())?;
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "Expected argument in function".to_string(),
+        })?;
 
     // Build the argument expression depending on which alternative matched
     let arg_expr = match arg_pair.as_rule() {
@@ -475,15 +523,18 @@ fn build_function(pair: Pair<Rule>) -> Result<Expr, String> {
             let inner = arg_pair
                 .into_inner()
                 .next()
-                .ok_or_else(|| "Expected expr in group argument".to_string())?;
+                .ok_or_else(|| ParseError::SyntaxError {
+                    position: 0,
+                    message: "Expected expression in group argument".to_string(),
+                })?;
             build_expr(inner)?
         }
         Rule::primary => build_primary(arg_pair)?,
         _ => {
-            return Err(format!(
+            return Err(ParseError::InvalidExpression(format!(
                 "Unexpected function argument rule: {:?}",
                 arg_pair.as_rule()
-            ))
+            )))
         }
     };
 
@@ -507,7 +558,10 @@ fn build_function(pair: Pair<Rule>) -> Result<Expr, String> {
     } else if raw.starts_with("\\lg") {
         MathFunction::Lg
     } else {
-        return Err(format!("Unknown function prefix in: {}", raw));
+        return Err(ParseError::InvalidExpression(format!(
+            "Unknown function prefix in: {}",
+            raw
+        )));
     };
 
     Ok(Expr::Function(func_kind, Box::new(arg_expr)))
@@ -520,11 +574,16 @@ fn build_function(pair: Pair<Rule>) -> Result<Expr, String> {
 /// Build a `Geometry` expression from a standalone geometry symbol.
 ///
 /// Grammar: `geometry = { cmd_triangle | cmd_angle }`
-fn build_geometry(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_geometry(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     Ok(Expr::Geometry(match pair.as_str() {
         "\\triangle" => GeometrySymbol::Triangle,
         "\\angle" => GeometrySymbol::Angle,
-        _ => return Err(format!("Unknown geometry symbol: {}", pair.as_str())),
+        _ => {
+            return Err(ParseError::InvalidExpression(format!(
+                "Unknown geometry symbol: {}",
+                pair.as_str()
+            )))
+        }
     }))
 }
 
@@ -539,18 +598,16 @@ fn build_geometry(pair: Pair<Rule>) -> Result<Expr, String> {
 /// The subscript_bounds contains an expression like `x \to 0`, which
 /// is parsed as `ComparisonOp(To, var, target)`. We extract the
 /// variable and target to construct `Limit(var, target, body)`.
-fn build_limit(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_limit(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner = pair.into_inner();
-    let bounds_expr = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected subscript bounds in limit".to_string())?,
-    )?;
-    let body = build_term(
-        inner
-            .next()
-            .ok_or_else(|| "Expected body term in limit".to_string())?,
-    )?;
+    let bounds_expr = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected subscript bounds in limit".to_string(),
+    })?)?;
+    let body = build_term(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected body term in limit".to_string(),
+    })?)?;
     let (var, target) = extract_limit_bounds(bounds_expr)?;
     Ok(Expr::Limit(Box::new(var), Box::new(target), Box::new(body)))
 }
@@ -558,13 +615,13 @@ fn build_limit(pair: Pair<Rule>) -> Result<Expr, String> {
 /// Extract the variable and target from a limit subscript expression.
 ///
 /// Expected form: `ComparisonOp(To, variable, target)`
-fn extract_limit_bounds(expr: Expr) -> Result<(Expr, Expr), String> {
+fn extract_limit_bounds(expr: Expr) -> Result<(Expr, Expr), ParseError> {
     match expr {
         Expr::ComparisonOp(ComparisonOpKind::To, var, target) => Ok((*var, *target)),
-        other => Err(format!(
+        other => Err(ParseError::InvalidExpression(format!(
             "Expected 'var -> target' in limit subscript, got {:?}",
             other
-        )),
+        ))),
     }
 }
 
@@ -574,23 +631,20 @@ fn extract_limit_bounds(expr: Expr) -> Result<(Expr, Expr), String> {
 ///
 /// The subscript_bounds contains `var = lower`, and superscript_bounds
 /// contains the upper bound.
-fn build_sum(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_sum(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner = pair.into_inner();
-    let sub_expr = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected subscript bounds in sum".to_string())?,
-    )?;
-    let sup_expr = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected superscript bounds in sum".to_string())?,
-    )?;
-    let body = build_term(
-        inner
-            .next()
-            .ok_or_else(|| "Expected body term in sum".to_string())?,
-    )?;
+    let sub_expr = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected subscript bounds in sum".to_string(),
+    })?)?;
+    let sup_expr = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected superscript bounds in sum".to_string(),
+    })?)?;
+    let body = build_term(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected body term in sum".to_string(),
+    })?)?;
     let (var, lower) = extract_sum_bounds(sub_expr)?;
     Ok(Expr::Sum(
         Box::new(var),
@@ -603,23 +657,20 @@ fn build_sum(pair: Pair<Rule>) -> Result<Expr, String> {
 /// Build a `Product` expression.
 ///
 /// Grammar: `product_expr = { cmd_prod ~ subscript_bounds ~ superscript_bounds ~ term }`
-fn build_product(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_product(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner = pair.into_inner();
-    let sub_expr = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected subscript bounds in product".to_string())?,
-    )?;
-    let sup_expr = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected superscript bounds in product".to_string())?,
-    )?;
-    let body = build_term(
-        inner
-            .next()
-            .ok_or_else(|| "Expected body term in product".to_string())?,
-    )?;
+    let sub_expr = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected subscript bounds in product".to_string(),
+    })?)?;
+    let sup_expr = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected superscript bounds in product".to_string(),
+    })?)?;
+    let body = build_term(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected body term in product".to_string(),
+    })?)?;
     let (var, lower) = extract_sum_bounds(sub_expr)?;
     Ok(Expr::Product(
         Box::new(var),
@@ -632,23 +683,20 @@ fn build_product(pair: Pair<Rule>) -> Result<Expr, String> {
 /// Build an `Integral` expression.
 ///
 /// Grammar: `integral_expr = { cmd_int ~ subscript_bounds ~ superscript_bounds ~ term }`
-fn build_integral(pair: Pair<Rule>) -> Result<Expr, String> {
+fn build_integral(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     let mut inner = pair.into_inner();
-    let lower = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected subscript bounds in integral".to_string())?,
-    )?;
-    let upper = build_expr(
-        inner
-            .next()
-            .ok_or_else(|| "Expected superscript bounds in integral".to_string())?,
-    )?;
-    let body = build_term(
-        inner
-            .next()
-            .ok_or_else(|| "Expected body term in integral".to_string())?,
-    )?;
+    let lower = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected subscript bounds in integral".to_string(),
+    })?)?;
+    let upper = build_expr(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected superscript bounds in integral".to_string(),
+    })?)?;
+    let body = build_term(inner.next().ok_or_else(|| ParseError::SyntaxError {
+        position: 0,
+        message: "Expected body term in integral".to_string(),
+    })?)?;
     Ok(Expr::Integral(
         Box::new(lower),
         Box::new(upper),
@@ -659,13 +707,13 @@ fn build_integral(pair: Pair<Rule>) -> Result<Expr, String> {
 /// Extract the variable and lower bound from a sum/product subscript expression.
 ///
 /// Expected form: `ComparisonOp(Eq, variable, lower_bound)`
-fn extract_sum_bounds(expr: Expr) -> Result<(Expr, Expr), String> {
+fn extract_sum_bounds(expr: Expr) -> Result<(Expr, Expr), ParseError> {
     match expr {
         Expr::ComparisonOp(ComparisonOpKind::Eq, var, lower) => Ok((*var, *lower)),
-        other => Err(format!(
+        other => Err(ParseError::InvalidExpression(format!(
             "Expected 'var = lower' in sum/product subscript, got {:?}",
             other
-        )),
+        ))),
     }
 }
 
@@ -1185,10 +1233,7 @@ mod tests {
     // -- Emptyset ----------------------------------------------------------
     #[test]
     fn ast_emptyset() {
-        assert_eq!(
-            parse_to_ast("\\emptyset").unwrap(),
-            Expr::Identifier("\\emptyset".to_string())
-        );
+        assert_eq!(parse_to_ast("\\emptyset").unwrap(), Expr::Emptyset);
     }
 
     // -- Limit -------------------------------------------------------------

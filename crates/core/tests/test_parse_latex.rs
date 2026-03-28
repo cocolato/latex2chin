@@ -3,13 +3,20 @@ use latex2chin_core::parse_latex;
 use pest::Parser;
 
 fn p(input: &str) -> String {
-    parse_latex(input)
+    parse_latex(input).unwrap()
 }
 
 fn assert_parse_fail(input: &str) {
     assert!(
         LatexParser::parse(Rule::input, input).is_err(),
         "expected parse failure for: {input}"
+    );
+}
+
+fn assert_translate_fail(input: &str) {
+    assert!(
+        parse_latex(input).is_err(),
+        "expected translation failure for: {input}"
     );
 }
 
@@ -25,13 +32,13 @@ fn number_integer() {
 fn number_decimal() {
     assert_eq!(p("3.14"), "3.14");
     assert_eq!(p("0.5"), "0.5");
-    assert_eq!(p("100.00"), "100.00");
+    assert_eq!(p("100.00"), "100");
 }
 
 // -- 2. Constants --------------------------------------------
 #[test]
 fn pi_constant() {
-    assert_eq!(p("\\pi"), "PI");
+    assert_eq!(p("\\pi"), "派");
 }
 
 // -- 3. Signs (signed_expr) ----------------------------------
@@ -238,12 +245,12 @@ fn greater_than_equal_geq() {
 
 #[test]
 fn approx_cmd() {
-    assert_eq!(p("\\pi \\approx 3.14"), "PI约等于3.14");
+    assert_eq!(p("\\pi \\approx 3.14"), "派约等于3.14");
 }
 
 #[test]
 fn approx_unicode() {
-    assert_eq!(p("\\pi ≈ 3.14"), "PI约等于3.14");
+    assert_eq!(p("\\pi \u{2248} 3.14"), "派约等于3.14");
 }
 
 // -- 10. Parse failures (reject invalid input) ---------------
@@ -297,7 +304,7 @@ fn negative_fraction() {
 
 #[test]
 fn pi_in_expression() {
-    assert_eq!(p("2 * \\pi"), "2乘PI");
+    assert_eq!(p("2 * \\pi"), "2乘派");
 }
 
 #[test]
@@ -308,8 +315,9 @@ fn complex_mixed_expr() {
 #[test]
 fn pm_expression() {
     assert_eq!(p("\\pm2"), "正负2");
-    assert_eq!(p("\\mp\\frac{1}{2}"), "正负2分之1");
-    assert_eq!(p("±1+2"), "正负1加2");
+    // mp must output "负正" not "正负"
+    assert_eq!(p("\\mp\\frac{1}{2}"), "负正2分之1");
+    assert_eq!(p("\u{00b1}1+2"), "正负1加2");
 }
 
 #[test]
@@ -323,7 +331,7 @@ fn degree_expression() {
 }
 
 // =============================================================================
-// NEW GRAMMAR TESTS - P0 and P1 syntax
+// NEW GRAMMAR TESTS - P0 and P1 syntax (via new pipeline)
 // =============================================================================
 
 // -- 13. Identifiers -----------------------------------------
@@ -340,10 +348,23 @@ fn identifier_in_expression() {
     assert_eq!(p("2 * n"), "2乘n");
 }
 
-// -- 14. Superscripts ----------------------------------------
+// -- 14. Superscripts (with special cases) --------------------
 #[test]
-fn superscript_simple() {
-    assert_eq!(p("x^2"), "x的2次方");
+fn superscript_square() {
+    // x^2 -> "x的平方" (special case)
+    assert_eq!(p("x^2"), "x的平方");
+}
+
+#[test]
+fn superscript_cube() {
+    // x^3 -> "x的立方" (special case)
+    assert_eq!(p("x^3"), "x的立方");
+}
+
+#[test]
+fn superscript_general() {
+    // x^n -> "x的n次方" (general case)
+    assert_eq!(p("x^5"), "x的5次方");
 }
 
 #[test]
@@ -353,17 +374,22 @@ fn superscript_braced() {
 
 #[test]
 fn superscript_greek() {
-    assert_eq!(p("x^\\pi"), "x的PI次方");
+    assert_eq!(p("x^\\pi"), "x的派次方");
 }
 
 #[test]
 fn superscript_in_expression() {
-    assert_eq!(p("x^2 + 1"), "x的2次方加1");
+    assert_eq!(p("x^2 + 1"), "x的平方加1");
 }
 
 #[test]
 fn superscript_with_group() {
-    assert_eq!(p("(x + 1)^2"), "x加1的2次方");
+    assert_eq!(p("(x + 1)^2"), "x加1的平方");
+}
+
+#[test]
+fn superscript_number_squared() {
+    assert_eq!(p("3^2"), "3的平方");
 }
 
 // -- 15. Subscripts ------------------------------------------
@@ -387,143 +413,144 @@ fn subscript_in_expression() {
     assert_eq!(p("a_1 + a_2"), "a下标1加a下标2");
 }
 
-// -- 16. Trig functions --------------------------------------
+// -- 16. Trig functions (Chinese names) ----------------------
 #[test]
 fn sin_function() {
-    assert_eq!(p("\\sin x"), "sinx");
+    assert_eq!(p("\\sin x"), "正弦x");
 }
 
 #[test]
 fn cos_function() {
-    assert_eq!(p("\\cos x"), "cosx");
+    assert_eq!(p("\\cos x"), "余弦x");
 }
 
 #[test]
 fn tan_function() {
-    assert_eq!(p("\\tan x"), "tanx");
+    assert_eq!(p("\\tan x"), "正切x");
 }
 
 #[test]
 fn sin_with_group() {
-    assert_eq!(p("\\sin(x + 1)"), "sinx加1");
+    assert_eq!(p("\\sin(x + 1)"), "正弦x加1");
 }
 
 #[test]
 fn sin_with_braces() {
-    assert_eq!(p("\\sin{x}"), "sinx");
+    assert_eq!(p("\\sin{x}"), "正弦x");
 }
 
 #[test]
 fn sin_with_number() {
-    assert_eq!(p("\\sin 5"), "sin5");
+    assert_eq!(p("\\sin 5"), "正弦5");
 }
 
 #[test]
 fn cot_function() {
-    assert_eq!(p("\\cot x"), "cotx");
+    assert_eq!(p("\\cot x"), "余切x");
 }
 
 #[test]
 fn sec_function() {
-    assert_eq!(p("\\sec x"), "secx");
+    assert_eq!(p("\\sec x"), "正割x");
 }
 
 #[test]
 fn csc_function() {
-    assert_eq!(p("\\csc x"), "cscx");
+    assert_eq!(p("\\csc x"), "余割x");
 }
 
 // -- 17. Log functions ---------------------------------------
 #[test]
 fn log_function() {
-    assert_eq!(p("\\log x"), "logx");
+    assert_eq!(p("\\log x"), "对数x");
 }
 
 #[test]
 fn ln_function() {
-    assert_eq!(p("\\ln x"), "lnx");
+    assert_eq!(p("\\ln x"), "自然对数x");
 }
 
 #[test]
 fn lg_function() {
-    assert_eq!(p("\\lg x"), "lgx");
+    assert_eq!(p("\\lg x"), "常用对数x");
 }
 
 #[test]
 fn log_with_braces() {
-    assert_eq!(p("\\log{x}"), "logx");
+    assert_eq!(p("\\log{x}"), "对数x");
 }
 
 #[test]
 fn log_with_group() {
-    assert_eq!(p("\\log(x + 1)"), "logx加1");
+    assert_eq!(p("\\log(x + 1)"), "对数x加1");
 }
 
-// -- 18. Greek letters ---------------------------------------
+// -- 18. Greek letters (Chinese transliterations) -------------
 #[test]
 fn greek_alpha() {
-    assert_eq!(p("\\alpha"), "\\alpha");
+    assert_eq!(p("\\alpha"), "阿尔法");
 }
 
 #[test]
 fn greek_beta() {
-    assert_eq!(p("\\beta"), "\\beta");
+    assert_eq!(p("\\beta"), "贝塔");
 }
 
 #[test]
 fn greek_gamma() {
-    assert_eq!(p("\\gamma"), "\\gamma");
+    assert_eq!(p("\\gamma"), "伽马");
 }
 
 #[test]
 fn greek_delta() {
-    assert_eq!(p("\\delta"), "\\delta");
+    assert_eq!(p("\\delta"), "德尔塔");
 }
 
 #[test]
 fn greek_epsilon() {
-    assert_eq!(p("\\epsilon"), "\\epsilon");
+    assert_eq!(p("\\epsilon"), "艾普西龙");
 }
 
 #[test]
 fn greek_theta() {
-    assert_eq!(p("\\theta"), "\\theta");
+    assert_eq!(p("\\theta"), "西塔");
 }
 
 #[test]
 fn greek_lambda() {
-    assert_eq!(p("\\lambda"), "\\lambda");
+    assert_eq!(p("\\lambda"), "兰姆达");
 }
 
 #[test]
 fn greek_mu() {
-    assert_eq!(p("\\mu"), "\\mu");
+    assert_eq!(p("\\mu"), "缪");
 }
 
 #[test]
 fn greek_sigma() {
-    assert_eq!(p("\\sigma"), "\\sigma");
+    assert_eq!(p("\\sigma"), "西格玛");
 }
 
 #[test]
 fn greek_pi() {
-    assert_eq!(p("\\pi"), "PI");
+    // pi must output "派" (not "PI")
+    assert_eq!(p("\\pi"), "派");
 }
 
 #[test]
 fn greek_phi() {
-    assert_eq!(p("\\phi"), "\\phi");
+    assert_eq!(p("\\phi"), "fai");
 }
 
 #[test]
 fn greek_omega() {
-    assert_eq!(p("\\omega"), "\\omega");
+    assert_eq!(p("\\omega"), "欧米伽");
 }
 
 #[test]
 fn greek_in_expression() {
-    assert_eq!(p("\\alpha + \\beta"), "\\alpha加\\beta");
-    assert_eq!(p("2 * \\pi"), "2乘PI");
+    assert_eq!(p("\\alpha + \\beta"), "阿尔法加贝塔");
+    assert_eq!(p("2 * \\pi"), "2乘派");
 }
 
 // -- 19. Nth root --------------------------------------------
@@ -545,45 +572,40 @@ fn nth_root_in_expression() {
 // -- 20. Calculus: limit -------------------------------------
 #[test]
 fn limit_simple() {
-    assert!(LatexParser::parse(Rule::input, "\\lim_{x \\to 0} x").is_ok());
+    assert_eq!(p("\\lim_{x \\to 0} x"), "当x趋向于0时的极限x");
 }
 
 #[test]
 fn limit_with_expr() {
-    assert!(LatexParser::parse(Rule::input, "\\lim_{x \\to 0} x + 1").is_ok());
-}
-
-#[test]
-fn limit_in_expression() {
-    assert!(LatexParser::parse(Rule::input, "\\lim_{x \\to 0} x + 1").is_ok());
+    assert_eq!(p("\\lim_{x \\to 0} x + 1"), "当x趋向于0时的极限x加1");
 }
 
 // -- 21. Calculus: sum ---------------------------------------
 #[test]
 fn sum_simple() {
-    assert!(LatexParser::parse(Rule::input, "\\sum_{i=1}^{n} i").is_ok());
+    assert_eq!(p("\\sum_{i=1}^{n} i"), "i从1到n求和i");
 }
 
 #[test]
 fn sum_with_frac() {
-    assert!(LatexParser::parse(Rule::input, "\\sum_{i=1}^{n} \\frac{1}{i}").is_ok());
+    assert_eq!(p("\\sum_{i=1}^{n} \\frac{1}{i}"), "i从1到n求和i分之1");
 }
 
 // -- 22. Calculus: product -----------------------------------
 #[test]
 fn product_simple() {
-    assert!(LatexParser::parse(Rule::input, "\\prod_{i=1}^{n} i").is_ok());
+    assert_eq!(p("\\prod_{i=1}^{n} i"), "i从1到n求积i");
 }
 
 // -- 23. Calculus: integral ----------------------------------
 #[test]
 fn integral_simple() {
-    assert!(LatexParser::parse(Rule::input, "\\int_{0}^{1} x").is_ok());
+    assert_eq!(p("\\int_{0}^{1} x"), "从0到1积分x");
 }
 
 #[test]
 fn integral_with_expression() {
-    assert!(LatexParser::parse(Rule::input, "\\int_{a}^{b} x + 1").is_ok());
+    assert_eq!(p("\\int_{a}^{b} x + 1"), "从a到b积分x加1");
 }
 
 // -- 24. Set theory operators --------------------------------
@@ -682,28 +704,29 @@ fn geo_similar() {
 // -- 27. Geometry standalone symbols -------------------------
 #[test]
 fn geo_triangle() {
-    assert_eq!(p("\\triangle"), "\\triangle");
+    assert_eq!(p("\\triangle"), "三角形");
 }
 
 #[test]
 fn geo_angle() {
-    assert_eq!(p("\\angle"), "\\angle");
+    assert_eq!(p("\\angle"), "角");
 }
 
 // -- 28. Arrow operator (to) --------------------------------
 #[test]
 fn op_to() {
-    assert_eq!(p("x \\to 0"), "x趋于0");
+    assert_eq!(p("x \\to 0"), "x趋向于0");
 }
 
 #[test]
 fn op_to_arrow() {
-    assert_eq!(p("x \\rightarrow 0"), "x趋于0");
+    assert_eq!(p("x \\rightarrow 0"), "x趋向于0");
 }
 
 // -- 29. Combined constructs ---------------------------------
 #[test]
 fn superscript_and_subscript() {
+    // x_1^2 should parse - verify via pest first
     assert!(LatexParser::parse(Rule::input, "x_1^2").is_ok());
 }
 
@@ -714,7 +737,7 @@ fn subscript_then_superscript() {
 
 #[test]
 fn function_in_expression() {
-    assert_eq!(p("\\sin x + \\cos x"), "sinx加cosx");
+    assert_eq!(p("\\sin x + \\cos x"), "正弦x加余弦x");
 }
 
 #[test]
@@ -776,4 +799,156 @@ fn reject_lim_no_subscript() {
 #[test]
 fn reject_sum_no_bounds() {
     assert_parse_fail("\\sum x");
+}
+
+// =============================================================================
+// P0+P1 ADDITIONAL TESTS
+// =============================================================================
+
+// -- 31. Error handling --------------------------------------
+#[test]
+fn error_on_empty_input() {
+    assert_translate_fail("");
+}
+
+#[test]
+fn error_on_unclosed_paren() {
+    assert_translate_fail("(1 + 2");
+}
+
+#[test]
+fn error_on_bare_operator() {
+    assert_translate_fail("+");
+}
+
+#[test]
+fn error_message_is_helpful() {
+    let result = parse_latex("(1 + 2");
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Parse error") || msg.contains("error"),
+        "Error message should be descriptive: {msg}"
+    );
+}
+
+// -- 32. Complex nested expressions --------------------------
+#[test]
+fn nested_frac_sqrt_superscript() {
+    assert_eq!(p("\\frac{\\sqrt{x^2+1}}{2}"), "2分之根号x的平方加1");
+}
+
+#[test]
+fn complex_mixed_with_functions() {
+    assert_eq!(p("\\sin x + \\cos x"), "正弦x加余弦x");
+}
+
+#[test]
+fn x_squared_plus_y_squared() {
+    assert_eq!(p("x^2 + y^2 = 1"), "x的平方加y的平方等于1");
+}
+
+#[test]
+fn pi_approx_value() {
+    // pi must output "派" not "PI"
+    assert_eq!(p("\\pi \\approx 3.14"), "派约等于3.14");
+}
+
+#[test]
+fn mp_in_expression() {
+    // mp must output "负正" not "正负"
+    assert_eq!(p("\\mp 2"), "负正2");
+}
+
+// -- 33. Geometry in context ---------------------------------
+#[test]
+fn triangle_similar_triangle() {
+    // \triangle \sim \triangle - geometry standalone with similar operator
+    assert!(LatexParser::parse(Rule::input, "\\triangle \\sim \\triangle").is_ok());
+    assert_eq!(p("\\triangle \\sim \\triangle"), "三角形相似于三角形");
+}
+
+// -- 34. Calculus in context ---------------------------------
+#[test]
+fn limit_x_squared() {
+    assert_eq!(p("\\lim_{x \\to 0} x^2"), "当x趋向于0时的极限x的平方");
+}
+
+#[test]
+fn sum_i_from_1_to_n() {
+    assert_eq!(p("\\sum_{i=1}^{n} i"), "i从1到n求和i");
+}
+
+#[test]
+fn integral_from_a_to_b() {
+    assert_eq!(p("\\int_{a}^{b} f"), "从a到b积分f");
+}
+
+// -- 35. Multiple Greek in expression ------------------------
+#[test]
+fn multiple_greek_letters() {
+    assert_eq!(p("\\alpha + \\beta + \\gamma"), "阿尔法加贝塔加伽马");
+}
+
+#[test]
+fn pi_in_fraction() {
+    assert_eq!(p("\\frac{\\pi}{2}"), "2分之派");
+}
+
+// -- 36. Subscript and superscript combined ------------------
+#[test]
+fn subscript_with_number() {
+    assert_eq!(p("a_1"), "a下标1");
+    assert_eq!(p("a_2"), "a下标2");
+}
+
+#[test]
+fn subscript_with_identifier() {
+    assert_eq!(p("x_n"), "x下标n");
+    assert_eq!(p("a_i"), "a下标i");
+}
+
+// -- 37. Degree and percent edge cases -----------------------
+#[test]
+fn degree_with_decimal() {
+    assert_eq!(p("90.5\\degree"), "90.5度");
+}
+
+#[test]
+fn percent_with_integer() {
+    assert_eq!(p("100%"), "百分之100");
+}
+
+// -- 38. Nth root variants -----------------------------------
+#[test]
+fn sqrt_square_root() {
+    assert_eq!(p("\\sqrt{9}"), "根号9");
+}
+
+#[test]
+fn sqrt_cubic_root() {
+    assert_eq!(p("\\sqrt[3]{27}"), "3次根号27");
+}
+
+// -- 39. Function with complex argument ----------------------
+#[test]
+fn sin_with_complex_arg() {
+    assert_eq!(p("\\sin(x + 1)"), "正弦x加1");
+}
+
+#[test]
+fn log_with_complex_arg() {
+    assert_eq!(p("\\log(x * 2)"), "对数x乘2");
+}
+
+// -- 40. Mixed operators -------------------------------------
+#[test]
+fn mixed_arithmetic_and_comparison() {
+    assert_eq!(p("1 + 2 = 3"), "1加2等于3");
+}
+
+#[test]
+fn mixed_arithmetic_and_set() {
+    assert_eq!(p("x \\in A"), "x属于A");
 }

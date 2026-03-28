@@ -1,3 +1,4 @@
+pub mod ast;
 pub mod latex_parser;
 
 use latex_parser::{LatexParser, Rule};
@@ -32,15 +33,23 @@ pub fn transform(pair: Pair<'_, Rule>) -> String {
 
         Rule::term => {
             let mut inner = pair.into_inner();
-            let base = transform(inner.next().unwrap());
-            match inner.next() {
-                Some(s) => match s.as_rule() {
-                    Rule::degree_mark => format!("{}度", base),
-                    Rule::percent_mark => format!("百分之{}", base),
+            let mut base = transform(inner.next().unwrap());
+            for s in inner {
+                match s.as_rule() {
+                    Rule::degree_mark => base = format!("{}度", base),
+                    Rule::percent_mark => base = format!("百分之{}", base),
+                    Rule::superscript => {
+                        let sup_inner = s.into_inner().next().unwrap();
+                        base = format!("{}的{}次方", base, transform(sup_inner));
+                    }
+                    Rule::subscript => {
+                        let sub_inner = s.into_inner().next().unwrap();
+                        base = format!("{}下标{}", base, transform(sub_inner));
+                    }
                     _ => unreachable!(),
-                },
-                None => base,
+                }
             }
+            base
         }
 
         Rule::primary | Rule::group => pair
@@ -57,10 +66,93 @@ pub fn transform(pair: Pair<'_, Rule>) -> String {
         }
 
         Rule::sqrt => format!("根号{}", transform(pair.into_inner().next().unwrap())),
+
+        Rule::sqrt_n => {
+            let mut inner = pair.into_inner();
+            let degree = transform(inner.next().unwrap());
+            let radicand = transform(inner.next().unwrap());
+            format!("{}次根号{}", degree, radicand)
+        }
+
         Rule::pm => format!("正负{}", transform(pair.into_inner().next().unwrap())),
 
+        Rule::function => {
+            let raw = pair.as_str();
+            let arg = transform(pair.into_inner().next().unwrap());
+            // cmd_func is silent, so determine function name from raw text
+            let func_name = if raw.starts_with("\\sin") {
+                "sin"
+            } else if raw.starts_with("\\cos") {
+                "cos"
+            } else if raw.starts_with("\\tan") {
+                "tan"
+            } else if raw.starts_with("\\cot") {
+                "cot"
+            } else if raw.starts_with("\\sec") {
+                "sec"
+            } else if raw.starts_with("\\csc") {
+                "csc"
+            } else if raw.starts_with("\\log") {
+                "log"
+            } else if raw.starts_with("\\ln") {
+                "ln"
+            } else if raw.starts_with("\\lg") {
+                "lg"
+            } else {
+                "fn"
+            };
+            format!("{}{}", func_name, arg)
+        }
+
+        Rule::limit_expr => {
+            let mut inner = pair.into_inner();
+            let subscript = inner.next().unwrap();
+            let body = transform(inner.next().unwrap());
+            // subscript_bounds contains the "x -> target" expression
+            let sub_expr = transform(subscript);
+            format!("极限{}{}", sub_expr, body)
+        }
+
+        Rule::sum_expr => {
+            let mut inner = pair.into_inner();
+            let sub = transform(inner.next().unwrap());
+            let sup = transform(inner.next().unwrap());
+            let body = transform(inner.next().unwrap());
+            format!("求和{}到{}的{}", sub, sup, body)
+        }
+
+        Rule::product_expr => {
+            let mut inner = pair.into_inner();
+            let sub = transform(inner.next().unwrap());
+            let sup = transform(inner.next().unwrap());
+            let body = transform(inner.next().unwrap());
+            format!("求积{}到{}的{}", sub, sup, body)
+        }
+
+        Rule::integral_expr => {
+            let mut inner = pair.into_inner();
+            let sub = transform(inner.next().unwrap());
+            let sup = transform(inner.next().unwrap());
+            let body = transform(inner.next().unwrap());
+            format!("积分从{}到{}的{}", sub, sup, body)
+        }
+
+        Rule::subscript_bounds | Rule::superscript_bounds => pair
+            .into_inner()
+            .map(|p| transform(p))
+            .collect::<Vec<String>>()
+            .join(""),
+
+        Rule::emptyset => "空集".to_string(),
+
+        Rule::geometry => pair.as_str().to_string(),
+
         Rule::number => pair.as_str().to_string(),
-        Rule::pi => "PI".to_string(),
+        Rule::identifier => pair.as_str().to_string(),
+        Rule::greek => match pair.as_str() {
+            "\\pi" => "PI".to_string(),
+            other => other.to_string(),
+        },
 
         Rule::op_add => "加".to_string(),
         Rule::op_sub => "减".to_string(),
@@ -75,6 +167,25 @@ pub fn transform(pair: Pair<'_, Rule>) -> String {
         Rule::op_gte => "大于等于".to_string(),
         Rule::op_approx => "约等于".to_string(),
         Rule::op_napprox => "不约等于".to_string(),
+
+        Rule::op_to => "趋于".to_string(),
+
+        Rule::op_in => "属于".to_string(),
+        Rule::op_notin => "不属于".to_string(),
+        Rule::op_cup => "并".to_string(),
+        Rule::op_cap => "交".to_string(),
+        Rule::op_subset => "真子集".to_string(),
+        Rule::op_superset => "真超集".to_string(),
+
+        Rule::op_forall => "任意".to_string(),
+        Rule::op_exists => "存在".to_string(),
+        Rule::op_implies => "推出".to_string(),
+        Rule::op_iff => "等价于".to_string(),
+
+        Rule::op_parallel => "平行于".to_string(),
+        Rule::op_perp => "垂直于".to_string(),
+        Rule::op_congruent => "全等于".to_string(),
+        Rule::op_similar => "相似于".to_string(),
 
         _ => pair.as_str().to_string(),
     }

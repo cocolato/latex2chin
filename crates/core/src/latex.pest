@@ -1,13 +1,23 @@
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
 
-number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
-pi     =  { "\\pi" }
+// --- Atoms ---
+number     = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+identifier = @{ ASCII_ALPHA }
 
+// --- Greek letters ---
+greek = {
+    "\\alpha" | "\\beta" | "\\gamma" | "\\delta" | "\\epsilon"
+    | "\\theta" | "\\lambda" | "\\mu" | "\\sigma" | "\\pi"
+    | "\\phi" | "\\omega"
+}
+
+// --- Arithmetic operators ---
 op_add = { "+" }
 op_sub = { "-" }
 op_mul = { "*" | "\\times" | "\\cdot" }
 op_div = { "/" | "\\div" }
 
+// --- Comparison operators ---
 op_eq      = { "=" }
 op_neq     = { "\\neq" | "\\ne" }
 op_lt      = { "<" | "\\lt" }
@@ -17,49 +27,146 @@ op_gte     = { "\\geq" | "\\ge" }
 op_approx  = { "\\approx" | "≈" }
 op_napprox = { "\\not" ~ "\\approx" | "≉" }
 
+// --- Set operators ---
+op_in       = { "\\in" }
+op_notin    = { "\\notin" }
+op_cup      = { "\\cup" }
+op_cap      = { "\\cap" }
+op_subset   = { "\\subset" }
+op_superset = { "\\supset" }
+
+// --- Logic operators ---
+op_forall  = { "\\forall" }
+op_exists  = { "\\exists" }
+op_implies = { "\\Rightarrow" | "\\implies" }
+op_iff     = { "\\iff" | "\\Leftrightarrow" }
+
+// --- Geometry relation operators ---
+op_parallel   = { "\\parallel" }
+op_perp       = { "\\perp" }
+op_congruent  = { "\\cong" }
+op_similar    = { "\\sim" }
+
+// --- Arrow operator (used in limit expressions) ---
+op_to = { "\\to" | "\\rightarrow" }
+
+// --- Combined binary operators ---
 binary_op = _{
     op_add | op_sub | op_mul | op_div
-    | op_eq | op_neq
-    | op_lt | op_gt | op_lte | op_gte
+    | op_eq | op_neq | op_lt | op_gt | op_lte | op_gte
     | op_approx | op_napprox
+    | op_in | op_notin | op_cup | op_cap | op_subset | op_superset
+    | op_forall | op_exists | op_implies | op_iff
+    | op_parallel | op_perp | op_congruent | op_similar
+    | op_to
 }
 
-lparen = _{ "(" }
-rparen = _{ ")" }
-lbrace = _{ "{" }
-rbrace = _{ "}" }
+// --- Delimiters ---
+lparen  = _{ "(" }
+rparen  = _{ ")" }
+lbrace  = _{ "{" }
+rbrace  = _{ "}" }
+lbracket = _{ "[" }
+rbracket = _{ "]" }
 
+// --- Commands ---
 cmd_frac   = _{ "\\frac" | "\\dfrac" | "\\tfrac" | "\\nicefrac" }
 cmd_sqrt   = _{ "\\sqrt" }
 cmd_pm     = _{ "\\pm" | "±" }
 cmd_mp     = _{ "\\mp" | "∓" }
 cmd_degree = _{ "\\degree" | "°" }
 
+// --- Function commands ---
+cmd_sin  = _{ "\\sin" }
+cmd_cos  = _{ "\\cos" }
+cmd_tan  = _{ "\\tan" }
+cmd_cot  = _{ "\\cot" }
+cmd_sec  = _{ "\\sec" }
+cmd_csc  = _{ "\\csc" }
+cmd_log  = _{ "\\log" }
+cmd_ln   = _{ "\\ln" }
+cmd_lg   = _{ "\\lg" }
+cmd_func = _{ cmd_sin | cmd_cos | cmd_tan | cmd_cot | cmd_sec | cmd_csc | cmd_log | cmd_ln | cmd_lg }
+
+// --- Calculus commands ---
+cmd_lim  = _{ "\\lim" }
+cmd_sum  = _{ "\\sum" }
+cmd_prod = _{ "\\prod" }
+cmd_int  = _{ "\\int" }
+
+// --- Geometry standalone symbols ---
+cmd_triangle  = _{ "\\triangle" }
+cmd_angle     = _{ "\\angle" }
+cmd_emptyset  = _{ "\\emptyset" | "\\varnothing" }
+
+// --- Top-level rule ---
 input = { SOI ~ expr ~ EOI }
 
+// --- Expression with operators ---
 expr = { sign* ~ term ~ (binary_op ~ sign* ~ term)* }
 
 sign = { op_add | op_sub }
 
-term = { primary ~ suffix? }
+// --- Term with optional suffixes ---
+term = { primary ~ suffix* }
 
+suffix = _{ superscript | subscript | degree_mark | percent_mark }
+
+superscript = { "^" ~ (lbrace ~ expr ~ rbrace | superscript_atom) }
+subscript   = { "_" ~ (lbrace ~ expr ~ rbrace | subscript_atom) }
+superscript_atom = _{ number | identifier | greek }
+subscript_atom   = _{ number | identifier | greek }
+
+// --- Primary expressions (ordered by specificity) ---
 primary = {
     group
     | frac
+    | sqrt_n
     | sqrt
+    | limit_expr
+    | sum_expr
+    | product_expr
+    | integral_expr
+    | function
     | pm
+    | emptyset
+    | geometry
+    | greek
     | number
-    | pi
+    | identifier
 }
 
-suffix = _{ degree_mark | percent_mark }
+// --- Suffix marks ---
 degree_mark  = { cmd_degree }
 percent_mark = { "%" }
 
+// --- Grouping ---
 group = { lparen ~ expr ~ rparen }
 
+// --- Fractions ---
 frac = { cmd_frac ~ lbrace ~ expr ~ rbrace ~ lbrace ~ expr ~ rbrace }
 
-sqrt = { cmd_sqrt ~ lbrace ~ expr ~ rbrace }
+// --- Roots ---
+sqrt   = { cmd_sqrt ~ lbrace ~ expr ~ rbrace }
+sqrt_n = { cmd_sqrt ~ lbracket ~ expr ~ rbracket ~ lbrace ~ expr ~ rbrace }
 
+// --- Plus/minus ---
 pm = { (cmd_pm | cmd_mp) ~ term }
+
+// --- Functions ---
+function = { cmd_func ~ (lbrace ~ expr ~ rbrace | group | primary) }
+
+// --- Calculus constructs ---
+limit_expr    = { cmd_lim ~ subscript_bounds ~ term }
+sum_expr      = { cmd_sum ~ subscript_bounds ~ superscript_bounds ~ term }
+product_expr  = { cmd_prod ~ subscript_bounds ~ superscript_bounds ~ term }
+integral_expr = { cmd_int ~ subscript_bounds ~ superscript_bounds ~ term }
+
+subscript_bounds   = _{ "_" ~ lbrace ~ expr ~ rbrace }
+superscript_bounds = _{ "^" ~ lbrace ~ expr ~ rbrace }
+
+// --- Constants ---
+emptyset = { cmd_emptyset }
+
+// --- Geometry standalone symbols ---
+geometry = { cmd_triangle | cmd_angle }

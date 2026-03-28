@@ -321,3 +321,459 @@ fn sqrt_expression() {
 fn degree_expression() {
     assert_eq!(p("100\\degree"), "100度");
 }
+
+// =============================================================================
+// NEW GRAMMAR TESTS - P0 and P1 syntax
+// =============================================================================
+
+// -- 13. Identifiers -----------------------------------------
+#[test]
+fn identifier_single_letter() {
+    assert_eq!(p("x"), "x");
+    assert_eq!(p("A"), "A");
+    assert_eq!(p("n"), "n");
+}
+
+#[test]
+fn identifier_in_expression() {
+    assert_eq!(p("x + 1"), "x加1");
+    assert_eq!(p("2 * n"), "2乘n");
+}
+
+// -- 14. Superscripts ----------------------------------------
+#[test]
+fn superscript_simple() {
+    assert_eq!(p("x^2"), "x的2次方");
+}
+
+#[test]
+fn superscript_braced() {
+    assert_eq!(p("x^{n+1}"), "x的n加1次方");
+}
+
+#[test]
+fn superscript_greek() {
+    assert_eq!(p("x^\\pi"), "x的PI次方");
+}
+
+#[test]
+fn superscript_in_expression() {
+    assert_eq!(p("x^2 + 1"), "x的2次方加1");
+}
+
+#[test]
+fn superscript_with_group() {
+    assert_eq!(p("(x + 1)^2"), "x加1的2次方");
+}
+
+// -- 15. Subscripts ------------------------------------------
+#[test]
+fn subscript_simple() {
+    assert_eq!(p("a_1"), "a下标1");
+}
+
+#[test]
+fn subscript_braced() {
+    assert_eq!(p("a_{n+1}"), "a下标n加1");
+}
+
+#[test]
+fn subscript_identifier() {
+    assert_eq!(p("x_n"), "x下标n");
+}
+
+#[test]
+fn subscript_in_expression() {
+    assert_eq!(p("a_1 + a_2"), "a下标1加a下标2");
+}
+
+// -- 16. Trig functions --------------------------------------
+#[test]
+fn sin_function() {
+    assert_eq!(p("\\sin x"), "sinx");
+}
+
+#[test]
+fn cos_function() {
+    assert_eq!(p("\\cos x"), "cosx");
+}
+
+#[test]
+fn tan_function() {
+    assert_eq!(p("\\tan x"), "tanx");
+}
+
+#[test]
+fn sin_with_group() {
+    assert_eq!(p("\\sin(x + 1)"), "sinx加1");
+}
+
+#[test]
+fn sin_with_braces() {
+    assert_eq!(p("\\sin{x}"), "sinx");
+}
+
+#[test]
+fn sin_with_number() {
+    assert_eq!(p("\\sin 5"), "sin5");
+}
+
+#[test]
+fn cot_function() {
+    assert_eq!(p("\\cot x"), "cotx");
+}
+
+#[test]
+fn sec_function() {
+    assert_eq!(p("\\sec x"), "secx");
+}
+
+#[test]
+fn csc_function() {
+    assert_eq!(p("\\csc x"), "cscx");
+}
+
+// -- 17. Log functions ---------------------------------------
+#[test]
+fn log_function() {
+    assert_eq!(p("\\log x"), "logx");
+}
+
+#[test]
+fn ln_function() {
+    assert_eq!(p("\\ln x"), "lnx");
+}
+
+#[test]
+fn lg_function() {
+    assert_eq!(p("\\lg x"), "lgx");
+}
+
+#[test]
+fn log_with_braces() {
+    assert_eq!(p("\\log{x}"), "logx");
+}
+
+#[test]
+fn log_with_group() {
+    assert_eq!(p("\\log(x + 1)"), "logx加1");
+}
+
+// -- 18. Greek letters ---------------------------------------
+#[test]
+fn greek_alpha() {
+    assert_eq!(p("\\alpha"), "\\alpha");
+}
+
+#[test]
+fn greek_beta() {
+    assert_eq!(p("\\beta"), "\\beta");
+}
+
+#[test]
+fn greek_gamma() {
+    assert_eq!(p("\\gamma"), "\\gamma");
+}
+
+#[test]
+fn greek_delta() {
+    assert_eq!(p("\\delta"), "\\delta");
+}
+
+#[test]
+fn greek_epsilon() {
+    assert_eq!(p("\\epsilon"), "\\epsilon");
+}
+
+#[test]
+fn greek_theta() {
+    assert_eq!(p("\\theta"), "\\theta");
+}
+
+#[test]
+fn greek_lambda() {
+    assert_eq!(p("\\lambda"), "\\lambda");
+}
+
+#[test]
+fn greek_mu() {
+    assert_eq!(p("\\mu"), "\\mu");
+}
+
+#[test]
+fn greek_sigma() {
+    assert_eq!(p("\\sigma"), "\\sigma");
+}
+
+#[test]
+fn greek_pi() {
+    assert_eq!(p("\\pi"), "PI");
+}
+
+#[test]
+fn greek_phi() {
+    assert_eq!(p("\\phi"), "\\phi");
+}
+
+#[test]
+fn greek_omega() {
+    assert_eq!(p("\\omega"), "\\omega");
+}
+
+#[test]
+fn greek_in_expression() {
+    assert_eq!(p("\\alpha + \\beta"), "\\alpha加\\beta");
+    assert_eq!(p("2 * \\pi"), "2乘PI");
+}
+
+// -- 19. Nth root --------------------------------------------
+#[test]
+fn nth_root_cubic() {
+    assert_eq!(p("\\sqrt[3]{8}"), "3次根号8");
+}
+
+#[test]
+fn nth_root_general() {
+    assert_eq!(p("\\sqrt[n]{x}"), "n次根号x");
+}
+
+#[test]
+fn nth_root_in_expression() {
+    assert_eq!(p("\\sqrt[3]{8} + 1"), "3次根号8加1");
+}
+
+// -- 20. Calculus: limit -------------------------------------
+#[test]
+fn limit_simple() {
+    assert!(LatexParser::parse(Rule::input, "\\lim_{x \\to 0} x").is_ok());
+}
+
+#[test]
+fn limit_with_expr() {
+    assert!(LatexParser::parse(Rule::input, "\\lim_{x \\to 0} x + 1").is_ok());
+}
+
+#[test]
+fn limit_in_expression() {
+    assert!(LatexParser::parse(Rule::input, "\\lim_{x \\to 0} x + 1").is_ok());
+}
+
+// -- 21. Calculus: sum ---------------------------------------
+#[test]
+fn sum_simple() {
+    assert!(LatexParser::parse(Rule::input, "\\sum_{i=1}^{n} i").is_ok());
+}
+
+#[test]
+fn sum_with_frac() {
+    assert!(LatexParser::parse(Rule::input, "\\sum_{i=1}^{n} \\frac{1}{i}").is_ok());
+}
+
+// -- 22. Calculus: product -----------------------------------
+#[test]
+fn product_simple() {
+    assert!(LatexParser::parse(Rule::input, "\\prod_{i=1}^{n} i").is_ok());
+}
+
+// -- 23. Calculus: integral ----------------------------------
+#[test]
+fn integral_simple() {
+    assert!(LatexParser::parse(Rule::input, "\\int_{0}^{1} x").is_ok());
+}
+
+#[test]
+fn integral_with_expression() {
+    assert!(LatexParser::parse(Rule::input, "\\int_{a}^{b} x + 1").is_ok());
+}
+
+// -- 24. Set theory operators --------------------------------
+#[test]
+fn set_in() {
+    assert_eq!(p("x \\in A"), "x属于A");
+}
+
+#[test]
+fn set_notin() {
+    assert_eq!(p("x \\notin A"), "x不属于A");
+}
+
+#[test]
+fn set_cup() {
+    assert_eq!(p("A \\cup B"), "A并B");
+}
+
+#[test]
+fn set_cap() {
+    assert_eq!(p("A \\cap B"), "A交B");
+}
+
+#[test]
+fn set_subset() {
+    assert_eq!(p("A \\subset B"), "A真子集B");
+}
+
+#[test]
+fn set_superset() {
+    assert_eq!(p("A \\supset B"), "A真超集B");
+}
+
+#[test]
+fn set_emptyset() {
+    assert_eq!(p("\\emptyset"), "空集");
+}
+
+#[test]
+fn set_emptyset_varnothing() {
+    assert_eq!(p("\\varnothing"), "空集");
+}
+
+// -- 25. Logic operators -------------------------------------
+#[test]
+fn logic_forall() {
+    assert_eq!(p("P \\forall x"), "P任意x");
+}
+
+#[test]
+fn logic_exists() {
+    assert_eq!(p("P \\exists x"), "P存在x");
+}
+
+#[test]
+fn logic_implies() {
+    assert_eq!(p("A \\Rightarrow B"), "A推出B");
+}
+
+#[test]
+fn logic_implies_alt() {
+    assert_eq!(p("A \\implies B"), "A推出B");
+}
+
+#[test]
+fn logic_iff() {
+    assert_eq!(p("A \\iff B"), "A等价于B");
+}
+
+#[test]
+fn logic_iff_alt() {
+    assert_eq!(p("A \\Leftrightarrow B"), "A等价于B");
+}
+
+// -- 26. Geometry operators ----------------------------------
+#[test]
+fn geo_parallel() {
+    assert_eq!(p("A \\parallel B"), "A平行于B");
+}
+
+#[test]
+fn geo_perp() {
+    assert_eq!(p("A \\perp B"), "A垂直于B");
+}
+
+#[test]
+fn geo_congruent() {
+    assert_eq!(p("A \\cong B"), "A全等于B");
+}
+
+#[test]
+fn geo_similar() {
+    assert_eq!(p("A \\sim B"), "A相似于B");
+}
+
+// -- 27. Geometry standalone symbols -------------------------
+#[test]
+fn geo_triangle() {
+    assert_eq!(p("\\triangle"), "\\triangle");
+}
+
+#[test]
+fn geo_angle() {
+    assert_eq!(p("\\angle"), "\\angle");
+}
+
+// -- 28. Arrow operator (to) --------------------------------
+#[test]
+fn op_to() {
+    assert_eq!(p("x \\to 0"), "x趋于0");
+}
+
+#[test]
+fn op_to_arrow() {
+    assert_eq!(p("x \\rightarrow 0"), "x趋于0");
+}
+
+// -- 29. Combined constructs ---------------------------------
+#[test]
+fn superscript_and_subscript() {
+    assert!(LatexParser::parse(Rule::input, "x_1^2").is_ok());
+}
+
+#[test]
+fn subscript_then_superscript() {
+    assert!(LatexParser::parse(Rule::input, "a_n^{n+1}").is_ok());
+}
+
+#[test]
+fn function_in_expression() {
+    assert_eq!(p("\\sin x + \\cos x"), "sinx加cosx");
+}
+
+#[test]
+fn nested_function() {
+    assert!(LatexParser::parse(Rule::input, "\\sin \\cos x").is_ok());
+}
+
+#[test]
+fn greek_with_superscript() {
+    assert!(LatexParser::parse(Rule::input, "\\alpha^2").is_ok());
+}
+
+#[test]
+fn frac_with_superscript() {
+    assert!(LatexParser::parse(Rule::input, "\\frac{1}{2}^3").is_ok());
+}
+
+// -- 30. Reject invalid new syntax ---------------------------
+#[test]
+fn reject_bare_caret() {
+    assert_parse_fail("^");
+}
+
+#[test]
+fn reject_bare_underscore() {
+    assert_parse_fail("_");
+}
+
+#[test]
+fn reject_caret_nothing() {
+    assert_parse_fail("x^");
+}
+
+#[test]
+fn reject_underscore_nothing() {
+    assert_parse_fail("x_");
+}
+
+#[test]
+fn reject_sqrt_no_brace() {
+    assert_parse_fail("\\sqrt");
+}
+
+#[test]
+fn reject_nth_root_no_brace() {
+    assert_parse_fail("\\sqrt[3]");
+}
+
+#[test]
+fn reject_function_no_arg() {
+    assert_parse_fail("\\sin");
+}
+
+#[test]
+fn reject_lim_no_subscript() {
+    assert_parse_fail("\\lim x");
+}
+
+#[test]
+fn reject_sum_no_bounds() {
+    assert_parse_fail("\\sum x");
+}

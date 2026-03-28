@@ -76,6 +76,16 @@ pub enum ComparisonOpKind {
     Gte,
     Approx,
     Napprox,
+    /// Arrow: `x \to 0`
+    To,
+    /// Parallel: `A \parallel B`
+    Parallel,
+    /// Perpendicular: `A \perp B`
+    Perpendicular,
+    /// Congruent: `A \cong B`
+    Congruent,
+    /// Similar: `A \sim B`
+    Similar,
 }
 
 /// Sign prefix kinds.

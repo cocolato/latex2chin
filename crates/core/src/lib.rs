@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod builder;
 pub mod latex_parser;
 
 use latex_parser::{LatexParser, Rule};

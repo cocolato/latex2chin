@@ -1,9 +1,7 @@
 import os
 from dataclasses import dataclass, field
+
 from latex2chin.latex2chin import parse_latex
-from langchain_openai import ChatOpenAI
-from langchain.agents import create_agent
-from langchain_core.tools import tool
 
 
 @dataclass
@@ -36,10 +34,18 @@ def configure(
         settings.model = model
 
 
-@tool
-def latex_to_chinese(latex_string: str) -> str:
-    """Convert a LaTeX math expression to Chinese text."""
-    return parse_latex(latex_string)
+def _require_langchain():
+    try:
+        from langchain_openai import ChatOpenAI
+        from langchain.agents import create_agent
+        from langchain_core.tools import tool
+
+        return ChatOpenAI, create_agent, tool
+    except ImportError as e:
+        raise ImportError(
+            "langchain is required for parse_chinese(). "
+            "Install it with: pip install latex2chin[llm]"
+        ) from e
 
 
 def parse_chinese(
@@ -49,6 +55,13 @@ def parse_chinese(
     base_url: str | None = None,
     model: str | None = None,
 ) -> str:
+    ChatOpenAI, create_agent, tool = _require_langchain()
+
+    @tool
+    def latex_to_chinese(latex_string: str) -> str:
+        """Convert a LaTeX math expression to Chinese text."""
+        return parse_latex(latex_string)
+
     llm = ChatOpenAI(
         model=model or settings.model,
         base_url=base_url or settings.base_url,

@@ -1,7 +1,7 @@
-/// AST types for representing parsed LaTeX mathematical expressions.
-///
-/// Each expression variant corresponds to a distinct LaTeX syntax construct.
-/// All types derive Debug, Clone, and PartialEq for testing and transformation.
+//! AST types for representing parsed LaTeX mathematical expressions.
+//!
+//! Each expression variant corresponds to a distinct LaTeX syntax construct.
+//! All types derive Debug, Clone, and PartialEq for testing and transformation.
 
 /// Top-level expression node representing any LaTeX math construct.
 #[derive(Debug, Clone, PartialEq)]

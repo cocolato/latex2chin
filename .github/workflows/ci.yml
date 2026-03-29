@@ -33,16 +33,7 @@ jobs:
       - uses: astral-sh/setup-uv@v4
       - name: Install Python dependencies
         run: uv sync
-      - name: Build and install
+      - name: Build and install extension
         run: uv run maturin develop --release
-      - name: Import smoke test
-        run: uv run python -c "from latex2chin import parse_latex; assert parse_latex(r'\frac{1}{2}') == '2分之1'"
-      - name: Test error handling
-        run: uv run python -c "
-          from latex2chin import parse_latex
-          try:
-              parse_latex('+++')
-              assert False, 'should have raised'
-          except ValueError:
-              pass
-          "
+      - name: Run smoke tests
+        run: uv run python .github/scripts/smoke_test.py

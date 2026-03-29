@@ -20,5 +20,6 @@ manifest-path = "crates/py/Cargo.toml"
 
 [dependency-groups]
 dev = [
+    "maturin>=1.0,<2.0",
     "httpx[socks]>=0.28.1",
 ]

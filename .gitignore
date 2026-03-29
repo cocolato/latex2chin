@@ -14,3 +14,6 @@ tasks.json
 
 # Task progress files
 PROGRESS.txt
+
+# Lock files
+uv.lock

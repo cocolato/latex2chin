@@ -1,5 +1,7 @@
 # latex2chin ⚡ Rust 驱动的 LaTeX 转中文
 
+> **latex2chin** 是一个以 Rust 为核心的 LaTeX 数学表达式中文转写库，通过 PyO3 提供高性能 Python 接口。
+
 > 基于 Rust 构建的高性能 LaTeX 数学表达式 → 中文读法转换工具。
 
 `latex2chin` 核心解析引擎使用 Rust 编写（通过 [PyO3](https://pyo3.rs) + [Maturin](https://www.maturin.rs) 提供 Python 绑定），解析速度极快，同时结合 LLM Agent 实现对混合中文文本中 LaTeX 片段的自动识别与转换。
@@ -35,6 +37,10 @@ pip install maturin
 maturin develop
 pip install -e .
 ```
+
+> **可选依赖：**
+> - `pip install latex2chin` — 核心功能（纯本地解析）
+> - `pip install latex2chin[llm]` — 包含 LLM 支持（langchain）
 
 ## 快速开始
 
@@ -297,6 +303,27 @@ print(settings.model)
 | `A \perp B` | `A垂直于B` | — |
 | `A \cong B` | `A全等于B` | — |
 | `A \sim B` | `A相似于B` | — |
+
+---
+
+## 路线图
+
+- [x] `parse_latex` - 纯本地 LaTeX 解析
+- [x] Python 绑定 (PyO3 + maturin)
+- [x] `parse_chinese` - LLM 混合文本处理
+- [ ] 更多 LaTeX 语法支持（矩阵、向量等）
+- [ ] 可配置输出风格（口语化 / 紧凑型 / 符号型）
+- [ ] CLI 命令行工具
+
+## 已知限制
+
+- 主要面向数学公式解析，不支持完整 LaTeX 文档
+- 不支持用户自定义宏（`\newcommand` 等）
+- 不支持环境类语法（`\begin{matrix}...\end{matrix}` 等）
+- 不支持文本模式与数学模式混用
+- 对歧义输入可能返回近似读法
+- `parse_chinese` 依赖 LLM，结果可能受模型影响
+- 当前输出风格为"紧凑型读法"（如 `sinx` 而非 `正弦x`）
 
 ---
 

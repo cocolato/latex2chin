@@ -6,8 +6,8 @@
 use crate::ast::*;
 use crate::error::ParseError;
 use crate::latex_parser::{LatexParser, Rule};
-use pest::iterators::Pair;
 use pest::Parser;
+use pest::iterators::Pair;
 
 /// Parse a LaTeX string and return the corresponding AST expression.
 ///
@@ -218,7 +218,7 @@ fn build_binary_op(op: Pair<Rule>, lhs: Expr, rhs: Expr) -> Result<Expr, ParseEr
             return Err(ParseError::InvalidExpression(format!(
                 "Unknown binary op rule: {:?}",
                 op.as_rule()
-            )))
+            )));
         }
     })
 }
@@ -257,7 +257,7 @@ fn build_term(pair: Pair<Rule>) -> Result<Expr, ParseError> {
                 return Err(ParseError::InvalidExpression(format!(
                     "Unexpected suffix rule in term: {:?}",
                     suffix.as_rule()
-                )))
+                )));
             }
         };
     }
@@ -534,7 +534,7 @@ fn build_function(pair: Pair<Rule>) -> Result<Expr, ParseError> {
             return Err(ParseError::InvalidExpression(format!(
                 "Unexpected function argument rule: {:?}",
                 arg_pair.as_rule()
-            )))
+            )));
         }
     };
 
@@ -582,7 +582,7 @@ fn build_geometry(pair: Pair<Rule>) -> Result<Expr, ParseError> {
             return Err(ParseError::InvalidExpression(format!(
                 "Unknown geometry symbol: {}",
                 pair.as_str()
-            )))
+            )));
         }
     }))
 }

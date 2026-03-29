@@ -6,13 +6,12 @@ build-backend = "maturin"
 name = "latex2chin"
 version = "0.1.0"
 description = "Convert LaTeX expressions to Chinese"
+license = "MIT"
 requires-python = ">=3.9"
-dependencies = [
-    "langchain>=0.3.27",
-    "langchain-core>=0.3.83",
-    "langchain-openai>=0.3.35",
-    "maturin>=1.12.6",
-]
+dependencies = []
+
+[project.optional-dependencies]
+llm = ["langchain>=0.3", "langchain-core>=0.3", "langchain-openai>=0.3"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

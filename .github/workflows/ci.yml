@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy -p latex2chin-core -- -D warnings
+      - name: Test
+        run: cargo test -p latex2chin-core
+
+  python:
+    runs-on: ubuntu-latest
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: astral-sh/setup-uv@v4
+      - name: Install Python dependencies
+        run: uv sync
+      - name: Build and install
+        run: uv run maturin develop --release
+      - name: Import smoke test
+        run: uv run python -c "from latex2chin import parse_latex; assert parse_latex(r'\frac{1}{2}') == '2分之1'"
+      - name: Test error handling
+        run: uv run python -c "
+          from latex2chin import parse_latex
+          try:
+              parse_latex('+++')
+              assert False, 'should have raised'
+          except ValueError:
+              pass
+          "
